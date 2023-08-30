@@ -1,0 +1,19 @@
+samples: samplesheet.tsv
+
+outdir: "out"
+logdir: "log"
+
+
+resources:
+    default:
+        threads: 1
+        mem: 8000
+        walltime: 720
+    fastqc:
+        threads: 1
+        mem: 2000
+        walltime: 480
+    multiqc:
+        threads: 2
+        mem: 8000
+        walltime: 1440
