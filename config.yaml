@@ -1,0 +1,55 @@
+samples: samplesheet.tsv
+
+outdir: "out"
+logdir: "log"
+
+params:
+    fastp:
+        extra: "--cut_tail --cut_window_size=10 --cut_mean_quality=20 --length_required=50 --correction"
+    kraken2:
+        db: db_kraken
+    unicycler:
+        extra: "--keep 0"
+        #extra: "--keep 0 --no_pilon --no_correct"
+        
+resources:
+    default:
+        threads: 1
+        mem: 8000
+        walltime: 720
+    fastqc:
+        threads: 1
+        mem: 2000
+        walltime: 480
+    quast:
+        threads: 4
+        mem: 4000
+        walltime: 480
+    fastp:
+        threads: 4
+        mem: 6000
+        walltime: 480
+    kraken2:
+        threads: 6
+        mem: 16000
+        walltime: 720
+    multiqc:
+        threads: 2
+        mem: 8000
+        walltime: 1440
+    unicycler:
+        threads: 12
+        mem: 16000
+        walltime: 1440
+    prokka:
+        threads: 8
+        mem: 12000
+        walltime: 720
+    amrfinder:
+        threads: 4
+        mem: 8000
+        walltime: 480
+    mlst:
+        threads: 4
+        mem: 8000
+        walltime: 480
