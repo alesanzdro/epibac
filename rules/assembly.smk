@@ -37,6 +37,3 @@ rule epibac_assembly:
             echo "Error: uno o más archivos de salida de Unicycler no se encontraron" >> {log}
         fi
         """
-
-
-include: "qc.smk"

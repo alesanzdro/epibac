@@ -1,4 +1,4 @@
-samples: samplesheet.tsv
+samples: samplesheet-LSPV013.csv
 
 outdir: "out"
 logdir: "log"
@@ -6,11 +6,11 @@ logdir: "log"
 params:
     fastp:
         extra: "--cut_tail --cut_window_size=10 --cut_mean_quality=20 --length_required=50 --correction"
-    kraken2:
-        db: db_kraken
     unicycler:
         extra: "--keep 0"
-        #extra: "--keep 0 --no_pilon --no_correct"
+    #    extra: "--keep 0 --no_pilon --no_correct"
+    #kraken2:
+    #    db: db_kraken
         
 resources:
     default:
