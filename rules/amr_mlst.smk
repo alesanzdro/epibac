@@ -1,6 +1,7 @@
 rule epibac_amr:
     input:
-        fasta = lambda wc: f"{OUTDIR}/assembly/{wc.sample}/{wc.sample}.fasta",
+        setup_db = f"{LOGDIR}/setup/setup_amrfinder_db.flag",
+        fasta = f"{OUTDIR}/assembly/{{sample}}/{{sample}}.fasta",
         prokka = lambda wc: f"{OUTDIR}/annotation/{wc.sample}/{wc.sample}.faa",
         gff = lambda wc: f"{OUTDIR}/annotation/{wc.sample}/{wc.sample}.gff" 
 
@@ -30,11 +31,39 @@ rule epibac_amr:
         -p {input.prokka} \
         -g {output.gff} \
         --coverage_min 0.7 \
-        > {output.tsv}
+        > {output.tsv} \
+        &> {log}
         """
 
-        #fasta = "{}/assembly/{{sample}}/{{sample}}.fasta".format(OUTDIR),
-        #prokka = "{}/annotation/{{sample}}/{{sample}}.faa".format(OUTDIR)
+rule epibac_resfinder:
+    input:
+        setup_db = f"{LOGDIR}/setup/setup_resfinder_db.flag",
+        fasta = f"{OUTDIR}/assembly/{{sample}}/{{sample}}.fasta"
+    output:
+        dir = directory("{}/amr_mlst/resfinder/{{sample}}".format(OUTDIR)),
+        res = "{}/amr_mlst/resfinder/{{sample}}/ResFinder_results.txt".format(OUTDIR)
+
+    log:
+        f"{LOGDIR}/resfinder/{{sample}}.log"
+    conda:
+        '../envs/epibac_extra.yml'
+    threads: get_resource("resfinder","threads")
+    resources:
+        mem_mb = get_resource("resfinder","mem"),
+        walltime = get_resource("resfinder","walltime")
+    params:
+        name=lambda wc: f"{wc.sample}" 
+    shell:
+        """
+        # Averigua la ruta del ambiente conda activo
+        CONDA_PREFIX=${{CONDA_PREFIX}}
+        
+        run_resfinder.py \
+        -db_res $CONDA_PREFIX/share/resfinder-4.1.11/db/resfinder_db \
+        -o {output.dir} \
+        -l 0.6 -t 0.8 --acquired \
+        -ifa {input.fasta}
+        """
 
 rule epibac_mlst:
     input:
@@ -56,6 +85,6 @@ rule epibac_mlst:
         mlst \
         --label {params.name} \
         {input} \
-        > {output.tsv}
+        > {output.tsv} \
+        &> {log}
         """
-	

@@ -94,6 +94,7 @@ rule epibac_fastqc_trim:
 
 rule epibac_kraken2:
     input:
+        setup_db = f"{LOGDIR}/setup/setup_kraken2_db.flag",
         r1 = rules.epibac_fastp_pe.output.r1,
         r2 = rules.epibac_fastp_pe.output.r2
     output:
@@ -113,16 +114,18 @@ rule epibac_kraken2:
         walltime = get_resource("kraken2","walltime")
     shell:
         """
+        # Averigua la ruta del ambiente conda activo
+        CONDA_PREFIX=${{CONDA_PREFIX}}
+
         kraken2 \
         --threads {threads} \
-        --db {config[params][kraken2][db]} \
+        --db $CONDA_PREFIX/db/kraken2_minusb \
         --gzip-compressed \
         --paired {input.r1} {input.r2} \
         --output {params.report_dir} \
         --report {output.report} \
         --classified-out {params.classified_out} \
-        --use-names \
-        &> {log}
+        --use-names #&> {log}
         """
 
 rule epibac_quast:
@@ -159,7 +162,8 @@ rule multiqc:
         ["{OUTDIR}/qc/quast/{sample}".format(OUTDIR=OUTDIR,sample=getattr(row, 'sample')) for row in samples.itertuples()],
         ["{OUTDIR}/annotation/{sample}".format(OUTDIR=OUTDIR,sample=getattr(row, 'sample')) for row in samples.itertuples()],
         ["{OUTDIR}/amr_mlst/{sample}_amrfinder.tsv".format(OUTDIR=OUTDIR,sample=getattr(row, 'sample')) for row in samples.itertuples()],
-        ["{OUTDIR}/amr_mlst/{sample}_mlst.tsv".format(OUTDIR=OUTDIR,sample=getattr(row, 'sample')) for row in samples.itertuples()]
+        ["{OUTDIR}/amr_mlst/{sample}_mlst.tsv".format(OUTDIR=OUTDIR,sample=getattr(row, 'sample')) for row in samples.itertuples()],
+        ["{OUTDIR}/amr_mlst/resfinder/{sample}/ResFinder_results.txt".format(OUTDIR=OUTDIR,sample=getattr(row, 'sample')) for row in samples.itertuples()]
 
 
     output:

@@ -5,3 +5,4 @@ channels:
   - defaults
 dependencies:
   - resfinder=4.1.11
+  - git
