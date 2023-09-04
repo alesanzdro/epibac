@@ -54,9 +54,13 @@ wildcard_constraints:
 
 rule all:
     input:
-        [expand(f"{OUTDIR}/qc/fastqc/{row.sample}_{{r}}_fastqc.zip", r=["r1","r2"]) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-	f"{OUTDIR}/qc/multiqc.html"
+        [expand(f"{OUTDIR}/qc/fastqc_trim/{row.sample}_{{r}}_fastqc.zip", r=["r1","r2"]) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
+	    f"{OUTDIR}/qc/multiqc.html"
 
 ##### Modules #####
 
+include: "rules/setup.smk"
 include: "rules/qc.smk"
+include: "rules/assembly.smk"
+include: "rules/annotation.smk"
+include: "rules/amr_mlst.smk"
