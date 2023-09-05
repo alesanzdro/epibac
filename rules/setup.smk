@@ -14,7 +14,7 @@ rule setup_kraken2_database:
         mkdir -p $CONDA_PREFIX/db/kraken2_minusb/
 
         # Descarga la base de datos
-        #wget -O $CONDA_PREFIX/db/kraken2_minusb/k2_minusb_20230605.tar.gz https://genome-idx.s3.amazonaws.com/kraken/k2_minusb_20230605.tar.gz &>> {log}
+        wget -O $CONDA_PREFIX/db/kraken2_minusb/k2_minusb_20230605.tar.gz https://genome-idx.s3.amazonaws.com/kraken/k2_minusb_20230605.tar.gz &>> {log}
         # https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20230605.tar.gz
         # Descomprime la base de datos
         tar -xvzf $CONDA_PREFIX/db/kraken2_minusb/k2_minusb_20230605.tar.gz -C $CONDA_PREFIX/db/kraken2_minusb/ &>> {log}

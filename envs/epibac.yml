@@ -13,7 +13,6 @@ dependencies:
   - unicycler=0.5.0
   - prokka=1.14.6
   - ncbi-amrfinderplus=3.11.18
-  - rgi=6.0.2
   - mlst=2.23.0
   - perl-xml-simple
   #- checkm-genome=1.2.2
