@@ -12,21 +12,7 @@ min_version("7.32")
 configfile: "config.yaml"
 #validate(config, schema="schemas/config.schema.yaml")
 
-
-##### Helper functions #####
-
-def get_resource(rule,resource):
-    try:
-        return config["resources"][rule][resource]
-    except KeyError:
-        return config["resources"]["default"][resource]
-
-def get_fastq(wildcards):
-    """Get fastq files of given sample-unit."""
-    fastqs = samples.loc[(wildcards.sample), ["fq1", "fq2"]].dropna()
-    if len(fastqs) == 2:
-        return {"r1": fastqs.fq1, "r2": fastqs.fq2}
-    return {"r1": fastqs.fq1}
+# snakemake --use-conda -j 20 --dry-run --dag | dot -Tpng > dag.png
 
 OUTDIR = config["outdir"]
 LOGDIR = config["logdir"]
@@ -43,21 +29,29 @@ samples.index = samples.index.astype(str)
 #validate(units, schema="schemas/units.schema.yaml")
 
 
-##### Wildcard constraints #####
-wildcard_constraints:
-    sample="|".join(samples["sample"])
+# def get_samples_filtered(wildcards):
+#     qc = pd.read_csv(checkpoints.epibac_fastq_filter_reco.get().output[0], sep=";") 
+#     return expand({sample}, 
+#         sample=qc[qc[1] > config["params"]["min_reads"]][0]
+#     )
 
 
-#include: "rules/common.smk"
+include: "rules/common.smk"
+##### Modules #####include: "rules/setup.smk"
+
+
 
 ##### Target rules #####
-
 rule all:
     input:
-        [expand(f"{OUTDIR}/qc/fastqc_trim/{row.sample}_{{r}}_fastqc.zip", r=["r1","r2"]) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-	    f"{OUTDIR}/qc/multiqc.html"
-
-##### Modules #####
+        f"{LOGDIR}/setup/setup_kraken2_db.flag",
+        f"{OUTDIR}/qc/multiqc.html"
+        # expand(
+        #     f"{OUTDIR}/qc/fastqc_trim/{{sample}}_{{read}}_fastqc.zip", 
+        #     sample=get_filtered_samples(), 
+        #     read=["r1", "r2"]
+        # )
+	    
 
 include: "rules/setup.smk"
 include: "rules/qc.smk"
