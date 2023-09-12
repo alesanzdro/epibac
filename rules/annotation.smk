@@ -2,7 +2,6 @@ rule epibac_prokka:
     input:
         setup_db = f"{LOGDIR}/setup/setup_prokka_db.flag",
         fasta = lambda wc: f"{OUTDIR}/assembly/{wc.sample}/{wc.sample}.fasta" 
-        #fasta = "{}/assembly/{{sample}}/{{sample}}.fasta".format(OUTDIR)
     output:
         faa = "{}/annotation/{{sample}}/{{sample}}.faa".format(OUTDIR),
         gff = "{}/annotation/{{sample}}/{{sample}}.gff".format(OUTDIR),

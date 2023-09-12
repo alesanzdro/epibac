@@ -31,7 +31,8 @@ rule setup_prokka_database:
     The up-to-date versions of all TIGRFAM models are available for download by FTP as a component of the current release of PGAP HMMs. 
     """
     output:
-        f"{LOGDIR}/setup/setup_prokka_db.flag"
+        flag = f"{LOGDIR}/setup/setup_prokka_db.flag"
+        #hmm_files = expand("{CONDA_PREFIX}/db/hmm/PGAP.hmm{ext}", CONDA_PREFIX="${CONDA_PREFIX}", ext=["", ".h3f", ".h3i", ".h3m", ".h3p"])
     log:
         f"{LOGDIR}/setup/prokka_db.log"
     conda:
@@ -66,12 +67,21 @@ rule setup_prokka_database:
         echo -e "\n\n$(printf '*%.0s' {{1..25}}) SETUP PROKKA DB $(printf '*%.0s' {{1..25}})\n" &>> {log}
         prokka --setupdb &>> {log}
 
+        # Verifica que los archivos fueron creados correctamente antes de crear el flag
+        for ext in "" .h3f .h3i .h3m .h3p; do
+            if [[ ! -f $CONDA_PREFIX/db/hmm/PGAP.hmm$ext ]]; then
+                echo "Error: El archivo PGAP.hmm$ext no fue creado." &>> {log}
+                exit 1
+            fi
+        done
+
         # Eliminamos fichero que ya no necesitamos
         rm $CONDA_PREFIX/db/hmm/hmm_PGAP.HMM.tgz*
 
         # Crear un flag para indicar que la configuración está completa
-        touch {output}
+        touch {output.flag}
         """
+
 
 rule setup_amrfinder_database:
     output:

@@ -1,3 +1,10 @@
+import glob
+import os
+def get_filtered_samples():
+    validated_samples = [f.split('/')[-1].split('.')[0] for f in glob.glob("out/validated/*.validated")]
+    return validated_samples
+
+
 rule epibac_fastqc_raw:
     input:
         lambda wc: samples.loc[(wc.sample)]['fq' + wc.read]
@@ -17,14 +24,13 @@ rule epibac_fastqc_raw:
     wrapper:
         "v2.6.0/bio/fastqc"
 
-
 checkpoint epibac_fastp_pe:
     input:
         r1 = lambda wc: samples.loc[wc.sample, 'fq1'],
         r2 = lambda wc: samples.loc[wc.sample, 'fq2']
     output:
         html="{}/qc/fastp/{{sample}}_fastp.html".format(OUTDIR),
-	    json="{}/qc/fastp/{{sample}}_fastp.son".format(OUTDIR),
+	    json="{}/qc/fastp/{{sample}}_fastp.json".format(OUTDIR),
 	    r1="{}/trimmed/{{sample}}_r1.fastq.gz".format(OUTDIR),
 	    r2="{}/trimmed/{{sample}}_r2.fastq.gz".format(OUTDIR)
     params:
@@ -51,57 +57,46 @@ checkpoint epibac_fastp_pe:
         &> {log}
         """
 
-checkpoint epibac_fastp_pe_count:
-    input:
-        r1=lambda wc: f"{OUTDIR}/trimmed/{wc.sample}_r1.fastq.gz",
-        r2=lambda wc: f"{OUTDIR}/trimmed/{wc.sample}_r2.fastq.gz"
-    output:
-        nreads="{}/qc/count_reads/{{sample}}_counts.txt".format(OUTDIR)
-    log:
-        f"{LOGDIR}/count_reads/{{sample}}.log"
-    conda:
-        '../envs/epibac.yml'
-    threads: get_resource("read_count","threads")
-    resources:
-        mem_mb = get_resource("read_count","mem"),
-        walltime = get_resource("read_count","walltime")
-    shell:
-        """
-        if [ ! -f {input.r1} ]; then
-            read_count_r1=0
-        else
-            read_count_r1=$(zcat {input.r1} | wc -l)
-        fi
-        
-        if [ ! -f {input.r2} ]; then
-            read_count_r2=0
-        else
-            read_count_r2=$(zcat {input.r2} | wc -l)
-        fi
-
-        total_read_count=$(( (read_count_r1 + read_count_r2) / 4 ))
-        echo $total_read_count > {output.nreads}  
-        &> {log}
-        """
-
 checkpoint validate_reads:
     input:
-        r1=lambda wc: f"{OUTDIR}/trimmed/{wc.sample}_r1.fastq.gz",
-        r2=lambda wc: f"{OUTDIR}/trimmed/{wc.sample}_r2.fastq.gz"
+        lambda wildcards: f"{OUTDIR}/trimmed/{wildcards.sample}_r1.fastq.gz"
     output:
-        validated="out/validated/{sample}.validated"
-    run:
-        import subprocess
-        cmd = f"zcat {input.r1} | wc -l"
-        result = subprocess.run(cmd, shell=True, capture_output=True)
-        read_count = int(result.stdout.decode())/4
-        if read_count > 1000:
-            open(output.validated, "w").close()
+        directory("{}/validated/{{sample}}".format(OUTDIR))
+    shell:
+        """
+        read_count=$(zcat {input} | wc -l)
+        if (( read_count / 4 > 1000 )); then
+            touch {output}
+        fi
+        """
+
+def get_file_names(wildcards, dir="qc/fastqc_trim", extension="fastq.gz"):
+    sample = wildcards['sample']
+    ck_output = checkpoints.validate_reads.get(sample=sample).output[0]
+    SMP, = glob_wildcards(os.path.join(ck_output, "{sample}"))
+    return [f"{OUTDIR}/{dir}/{sample}_r{read}.{extension}" for sample in SMP for read in ['r1', 'r2']]
+
+
+
+#def get_file_names(wildcards):
+#    ck_output = checkpoints.validate_reads.get(**wildcards).output[0]
+#    samples, = glob_wildcards(os.path.join(ck_output, "{sample}"))
+#    return [f"{OUTDIR}/trimmed/{sample}_r{wildcards.read}.fastq.gz" for sample in samples]
+
+
+
+
+#def get_file_names(wildcards, dir="qc/fastqc_trim", extension="fastq.gz"):
+#    ck_output = checkpoints.validate_reads.get(**wildcards).output[0]
+#    validated_samples = [os.path.basename(fname) for fname in glob.glob(f"{ck_output}/*")]
+#    return [f"{OUTDIR}/{dir}/{sample}_r{read}.{extension}" for sample in validated_samples for read in ['r1', 'r2']]
+
+
 
 
 rule epibac_fastqc_trim:
     input:
-        lambda wc: f"{OUTDIR}/trimmed/{wc.sample}_r{wc.read}.fastq.gz" 
+        lambda wc: get_file_names(wc, dir="trimmed", extension="fastq.gz") if wc.sample in get_filtered_samples() else []
     output:
         html="{}/qc/fastqc_trim/{{sample}}_r{{read}}_fastqc.html".format(OUTDIR),
         zip="{}/qc/fastqc_trim/{{sample}}_r{{read}}_fastqc.zip".format(OUTDIR)
@@ -118,12 +113,31 @@ rule epibac_fastqc_trim:
     wrapper:
         "v2.6.0/bio/fastqc"
 
+rule multiqc:
+    input:
+        [expand(f"{OUTDIR}/qc/fastqc_raw/{row.sample}_{{r}}_fastqc.zip", r=["r1","r2"]) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
+        [expand(f"{OUTDIR}/qc/fastp/{row.sample}_fastp.html") for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
+        lambda wc: get_file_names(wc, dir="qc/fastqc_trim", extension="fastq.gz")
+        
+        #[expand(f"{OUTDIR}/qc/fastqc_trim/{sample}_{{r}}_fastqc.html", r=["r1","r2"]) for sample in get_filtered_samples()]
+    output:
+        f"{OUTDIR}/qc/multiqc.html"
+    log:
+        f"{LOGDIR}/multiqc.log"
+    threads: get_resource("multiqc","threads")
+    resources:
+        mem_mb = get_resource("multiqc","mem"),
+        walltime = get_resource("multiqc","walltime")
+    wrapper:
+        "v2.6.0/bio/multiqc"
+
+
 
 rule epibac_kraken2:
     input:
         setup_db = f"{LOGDIR}/setup/setup_kraken2_db.flag",
-        r1 = rules.epibac_fastp_pe.output.r1,
-        r2 = rules.epibac_fastp_pe.output.r2
+        r1 = lambda wc: f"{OUTDIR}/trimmed/{sample}_r1.fastq.gz" if wc.sample in get_filtered_samples() else [],
+        r2 = lambda wc: f"{OUTDIR}/trimmed/{sample}_r2.fastq.gz" if wc.sample in get_filtered_samples() else []
     output:
         "{}/qc/kraken2/{{sample}}_CR_1.fastq".format(OUTDIR),
         "{}/qc/kraken2/{{sample}}_CR_2.fastq".format(OUTDIR),
@@ -157,7 +171,7 @@ rule epibac_kraken2:
 
 rule epibac_quast:
     input:
-        "{}/assembly/{{sample}}/{{sample}}.fasta".format(OUTDIR)
+        lambda wc: f"{OUTDIR}/assembly/{wc.sample}/{wc.sample}.fasta" if wc.sample in get_filtered_samples() else []
     output:
         directory("{}/qc/quast/{{sample}}".format(OUTDIR))
     params:
@@ -181,24 +195,3 @@ rule epibac_quast:
         """
 
 
-rule multiqc:
-    input:
-        [expand(f"{OUTDIR}/qc/fastqc_raw/{row.sample}_{{r}}_fastqc.zip", r=["r1","r2"]) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-        ["{OUTDIR}/qc/count_reads/{sample}_counts.txt".format(OUTDIR=OUTDIR,sample=getattr(row, 'sample')) for row in samples.itertuples()],
-        [expand(f"{OUTDIR}/qc/fastqc_trim/{row.sample}_{{r}}_fastqc.zip", r=["r1","r2"], allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-        [expand(f"{OUTDIR}/qc/kraken2/{row.sample}.txt", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-        [expand(f"{OUTDIR}/qc/quast/{row.sample}", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-        [expand(f"{OUTDIR}/annotation/{row.sample}", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-        [expand(f"{OUTDIR}/amr_mlst/{row.sample}_amrfinder.tsv", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-        [expand(f"{OUTDIR}/amr_mlst/{row.sample}_mlst.tsv", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-        [expand(f"{OUTDIR}/amr_mlst/resfinder/{row.sample}/ResFinder_results.txt", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")]
-    output:
-        f"{OUTDIR}/qc/multiqc.html"
-    log:
-        f"{LOGDIR}/multiqc.log"
-    threads: get_resource("multiqc","threads")
-    resources:
-        mem_mb = get_resource("multiqc","mem"),
-        walltime = get_resource("multiqc","walltime")
-    wrapper:
-        "v2.6.0/bio/multiqc"

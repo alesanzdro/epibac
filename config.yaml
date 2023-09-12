@@ -4,6 +4,7 @@ outdir: "out"
 logdir: "log"
 
 params:
+    min_reads: 1000
     fastp:
         extra: "--cut_tail --cut_window_size=10 --cut_mean_quality=20 --length_required=50 --correction"
     unicycler:
@@ -29,6 +30,10 @@ resources:
         threads: 4
         mem: 6000
         walltime: 480
+    read_count:
+        threads: 1
+        mem: 4000
+        walltime: 320
     kraken2:
         threads: 6
         mem: 16000
