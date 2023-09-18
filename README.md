@@ -117,3 +117,11 @@ Por lo tanto en equipos más potentes, con CPUs más rápidas y un mayor número
 Durante las ejecuciones de los análisis es posible que notemos alguna ralentización del sistema.
 
 En caso de correr los análisis bajo un entorno virtual como `VirtualBox`, habrá que tener en cuenta este coste, de mantener dos sistemas operativos en una misma máquina y tal vez reducir el número de procesadores empleados en `-j`.
+
+# Autores
+
+- Alejandro Sanz-Carbonell
+- Irving Cancino Muñoz
+- Fernando González-Candelas
+
+
