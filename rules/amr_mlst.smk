@@ -20,6 +20,14 @@ rule epibac_amr:
         name=lambda wc: f"{wc.sample}" 
     shell:
         """
+        # Verifica si el archivo FASTA es vacío o no
+        if [ ! -s {input.fasta} ]; then
+            echo "[ERROR] El archivo FASTA {input} está vacío" &> {log}
+            touch {output.gff}
+            touch {output.tsv}
+            exit 0
+        fi
+
         # preparamos fichero para amrfinder
         perl -pe '/^##FASTA/ && exit; s/(\W)Name=/$1OldName=/i; s/ID=([^;]+)/ID=$1;Name=$1/' {input.gff} > {output.gff}
 
@@ -32,7 +40,7 @@ rule epibac_amr:
         -g {output.gff} \
         --coverage_min 0.7 \
         > {output.tsv} \
-        &> {log}
+        2> {log}
         """
 
 rule epibac_resfinder:
@@ -55,14 +63,23 @@ rule epibac_resfinder:
         name=lambda wc: f"{wc.sample}" 
     shell:
         """
+        # Verifica si el archivo FASTA es vacío o no
+        if [ ! -s {input.fasta} ]; then
+            echo "[ERROR] El archivo FASTA {input} está vacío" &> {log}
+            mkdir -p {output.dir}
+            touch {output.res}
+            exit 0
+        fi
+
         # Averigua la ruta del ambiente conda activo
         CONDA_PREFIX=${{CONDA_PREFIX}}
         
         run_resfinder.py \
         -db_res $CONDA_PREFIX/share/resfinder-4.1.11/db/resfinder_db \
         -o {output.dir} \
-        -l 0.6 -t 0.8 --acquired \
-        -ifa {input.fasta}
+        {config[params][resfinder][extra]} \
+        -ifa {input.fasta} \
+        &> {log}
         """
 
 rule epibac_mlst:
@@ -82,9 +99,16 @@ rule epibac_mlst:
         name=lambda wc: f"{wc.sample}" 
     shell:
         """
+        # Verifica si el archivo FASTA es vacío o no
+        if [ ! -s {input} ]; then
+            echo "[ERROR] El archivo FASTA {input} está vacío" &> {log}
+            touch {output.tsv}
+            exit 0
+        fi
+
         mlst \
         --label {params.name} \
         {input} \
         > {output.tsv} \
-        &> {log}
+        2> {log}
         """

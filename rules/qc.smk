@@ -172,6 +172,13 @@ rule epibac_quast:
         walltime = get_resource("quast","walltime")
     shell:
         """
+        # Verifica si el archivo FASTA es vacío o no
+        if [ ! -s {input} ]; then
+            echo "[ERROR] El archivo FASTA {input} está vacío" &> {log}
+            mkdir -p {output}
+            exit 0
+        fi
+
         quast -t {threads} \
         {input} \
         -l {params.l} \
@@ -184,14 +191,14 @@ rule epibac_quast:
 rule multiqc:
     input:
         [expand(f"{OUTDIR}/qc/fastqc_raw/{row.sample}_{{r}}_fastqc.zip", r=["r1","r2"]) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-        ["{OUTDIR}/qc/count_reads/{sample}_counts.txt".format(OUTDIR=OUTDIR,sample=getattr(row, 'sample')) for row in samples.itertuples()],
+        #["{OUTDIR}/qc/count_reads/{sample}_counts.txt".format(OUTDIR=OUTDIR,sample=getattr(row, 'sample')) for row in samples.itertuples()],
         [expand(f"{OUTDIR}/qc/fastqc_trim/{row.sample}_{{r}}_fastqc.zip", r=["r1","r2"], allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
         [expand(f"{OUTDIR}/qc/kraken2/{row.sample}.txt", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
         [expand(f"{OUTDIR}/qc/quast/{row.sample}", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
         [expand(f"{OUTDIR}/annotation/{row.sample}", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-        [expand(f"{OUTDIR}/amr_mlst/{row.sample}_amrfinder.tsv", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-        [expand(f"{OUTDIR}/amr_mlst/{row.sample}_mlst.tsv", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
-        [expand(f"{OUTDIR}/amr_mlst/resfinder/{row.sample}/ResFinder_results.txt", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")]
+        #[expand(f"{OUTDIR}/amr_mlst/{row.sample}_amrfinder.tsv", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
+        #[expand(f"{OUTDIR}/amr_mlst/{row.sample}_mlst.tsv", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")],
+        #[expand(f"{OUTDIR}/amr_mlst/resfinder/{row.sample}/ResFinder_results.txt", allow_missing=True) for row in samples.itertuples() if (str(getattr(row, 'fq2')) != "nan")]
     output:
         f"{OUTDIR}/qc/multiqc.html"
     log:

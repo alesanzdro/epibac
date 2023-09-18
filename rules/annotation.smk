@@ -18,6 +18,15 @@ rule epibac_prokka:
         prefix=lambda wc: f"{wc.sample}" 
     shell:
         """
+        # Verifica si el archivo FASTA es vacío o no
+        if [ ! -s {input.fasta} ]; then
+            echo "[ERROR] El archivo FASTA {input.fasta} está vacío" &> {log}
+            mkdir -p {output.dir}
+            touch {output.faa}
+            touch {output.gff}
+            exit 0
+        fi
+
         # Averigua la ruta del ambiente conda activo
         CONDA_PREFIX=${{CONDA_PREFIX}}
 

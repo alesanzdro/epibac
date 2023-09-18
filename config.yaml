@@ -10,13 +10,15 @@ params:
     unicycler:
         extra: "--keep 0"
     #    extra: "--keep 0 --no_pilon --no_correct"
+    resfinder:
+        extra: "-l 0.6 -t 0.8 --acquired"
     #kraken2:
     #    db: db_kraken
-        
+
 resources:
     default:
         threads: 1
-        mem: 8000
+        mem: 4000
         walltime: 720
     fastqc:
         threads: 1
@@ -28,33 +30,37 @@ resources:
         walltime: 480
     fastp:
         threads: 4
-        mem: 6000
+        mem: 4000
         walltime: 480
     read_count:
         threads: 1
-        mem: 4000
+        mem: 2000
         walltime: 320
     kraken2:
         threads: 6
-        mem: 16000
+        mem: 8000
         walltime: 720
     multiqc:
-        threads: 2
-        mem: 8000
+        threads: 6
+        mem: 4000
         walltime: 1440
     unicycler:
-        threads: 12
-        mem: 16000
-        walltime: 1440
-    prokka:
         threads: 8
         mem: 12000
+        walltime: 1440
+    prokka:
+        threads: 6
+        mem: 8000
         walltime: 720
     amrfinder:
         threads: 4
-        mem: 8000
+        mem: 6000
         walltime: 480
     mlst:
         threads: 4
-        mem: 8000
+        mem: 6000
+        walltime: 480
+    summary:
+        threads: 2
+        mem: 6000
         walltime: 480
