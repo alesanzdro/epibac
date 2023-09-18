@@ -2,6 +2,8 @@ import pandas as pd
 import os
 from snakemake.utils import validate
 from snakemake.utils import min_version
+from datetime import datetime
+
 min_version("7.32")
 
 #singularity: "docker://continuumio/miniconda3:4.6.14"
@@ -29,32 +31,19 @@ samples.index = samples.index.astype(str)
 #validate(units, schema="schemas/units.schema.yaml")
 
 
-# def get_samples_filtered(wildcards):
-#     qc = pd.read_csv(checkpoints.epibac_fastq_filter_reco.get().output[0], sep=";") 
-#     return expand({sample}, 
-#         sample=qc[qc[1] > config["params"]["min_reads"]][0]
-#     )
-
-
 include: "rules/common.smk"
 ##### Modules #####include: "rules/setup.smk"
-
-
 
 ##### Target rules #####
 rule all:
     input:
-        f"{LOGDIR}/setup/setup_kraken2_db.flag",
-        f"{OUTDIR}/qc/multiqc.html"
-        # expand(
-        #     f"{OUTDIR}/qc/fastqc_trim/{{sample}}_{{read}}_fastqc.zip", 
-        #     sample=get_filtered_samples(), 
-        #     read=["r1", "r2"]
-        # )
-	    
+        f"{OUTDIR}/qc/multiqc.html",
+        f"{OUTDIR}/report/{datetime.now().strftime('%y%m%d')}_EPIBAC.tsv"
+   
 
 include: "rules/setup.smk"
 include: "rules/qc.smk"
 include: "rules/assembly.smk"
 include: "rules/annotation.smk"
 include: "rules/amr_mlst.smk"
+include: "rules/report.smk"
