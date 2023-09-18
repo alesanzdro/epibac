@@ -105,6 +105,12 @@ snakemake --config samples=test/samplesheet.tsv outdir=test/out logdir=test/log 
 
 Aquí analizaremos una muestra anonimizada para comprobar que todos los pasos se realizan correctamente.
 
+## Relanzar pipeline
+En caso de que hubiéramos tenido algún error podríamos volver a intentar lanzar el pipeline añadiendo la opción `--rerun-incomplete`
+```
+snakemake --config samples=test/samplesheet.tsv outdir=test/out logdir=test/log --use-conda -j 8 --rerun-incomplete
+```
+
 
 ## Fichero config.yaml
 
@@ -117,6 +123,12 @@ Por lo tanto en equipos más potentes, con CPUs más rápidas y un mayor número
 Durante las ejecuciones de los análisis es posible que notemos alguna ralentización del sistema.
 
 En caso de correr los análisis bajo un entorno virtual como `VirtualBox`, habrá que tener en cuenta este coste, de mantener dos sistemas operativos en una misma máquina y tal vez reducir el número de procesadores empleados en `-j`.
+
+## Ejecución SNAKEMAKE + SLURM
+Snakemake permite la integración con SLURM, a falta de configurar, para lanzar todos los trabajos por el gestor de colas. Haría falta una configuración adicional, no planteada en esta primera versión.
+
+[Snakemake Documentation on Cluster Execution](https://snakemake.readthedocs.io/en/stable/executing/cluster.html)
+
 
 # Autores
 
