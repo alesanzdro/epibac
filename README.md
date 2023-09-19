@@ -2,6 +2,12 @@
 
 Pipeline for basic bioinformatic analysis of bacteria and study of AMR and MLST.
 
+Example of the excel obtained as analysis results from a run.
+
+
+![Example_EXCEL](test/Ejemplo_resultados_run.png)
+
+
 
 # Instalación de CONDA
 
@@ -116,6 +122,13 @@ En el siguiente gráfico se muestra el esquema básico de trabajo para una muest
 
 ![Grafo flujo de trabajos con una muestra](test/dag.png)
 
+
+Y el resultado debería dar:
+
+| | | | | | | | | |
+|-|-|-|-|-|-|-|-|-|
+|Sample|Scheme_mlst|ST|MLST|AMR|VIRULENCE|SCOPE_core|GENE_resfinder|PHENO_resfinder|
+|23_SALM_92123|senterica_achtman_2|1628|aroC(46) dnaN(60) hemD(10) hisD(9) purE(6) sucA(12) thrA(17)|fosA7.7 mdsA mdsB tet(C)|iroB iroC sinH|fosA7.7 tet(C)|aac(6')-Iaa fosA7 tet(C)|tobramycin-amikacin[aminoglycoside] fosfomycin[fosfomycin] tetracycline-doxycycline[tetracycline]|
 
 
 ## Relanzar pipeline
