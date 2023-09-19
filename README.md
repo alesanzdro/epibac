@@ -133,6 +133,6 @@ Snakemake permite la integración con SLURM, a falta de configurar, para lanzar 
 # Autores
 
 - Alejandro Sanz-Carbonell
-- Irving Cancino Muñoz
-
+- Irving Cancino-Muñoz
+- Fernando González-Candelas
 
