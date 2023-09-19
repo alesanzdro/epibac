@@ -1,0 +1,8 @@
+name: epibac_extra
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - resfinder=4.1.11
+  - git

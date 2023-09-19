@@ -1,0 +1,16 @@
+name: epibac_report
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  - pandas
+  - dash
+  - matplotlib
+  - seaborn
+  - dash-bio
+  - xlsxwriter
+  - pip
+  - pip:
+    - openpyxl
+    
