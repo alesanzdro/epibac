@@ -67,7 +67,7 @@ conda install mamba
 Éste será el primer ambiente que instalemos que llamaremos `snake`. Al instalarlo con `mamba`, irá mucho más rápido.
 
 ```
-mamba create -n snake -c conda-forge bioconda::snakemake=7.32 bioconda::snakemake-minimal=7.32 snakemake-wrapper-utils
+mamba create -n snake -c conda-forge bioconda::snakemake=7.32 bioconda::snakemake-minimal=7.32 snakemake-wrapper-utils pandas openpyxl
 ```
 
 ## Cargamos ambiente SNAKE
@@ -134,6 +134,5 @@ Snakemake permite la integración con SLURM, a falta de configurar, para lanzar 
 
 - Alejandro Sanz-Carbonell
 - Irving Cancino Muñoz
-- Fernando González-Candelas
 
 
