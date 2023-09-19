@@ -63,7 +63,6 @@ conda info -a
 ```
 
 
-
 # Instalamos MAMBA, como gestor de paquetes en base (ambiente inicial de CONDA)
 ```
 conda install mamba
@@ -95,7 +94,7 @@ En posteriores reuniones se hablará de la salida de datos que les interesa a lo
 
 ## Clonamos repositorio GIT con el pipeline y los ficheros de prueba
 ```
-git clone https://github.com/alesanzdro/epibac.git
+git clone https://github.com/EpiMol/epibac.git
 ```
 
 ## Corremos test de prueba que también nos servirá para instalar todos los programas necesarios y bases de datos
