@@ -1,4 +1,5 @@
-# EPIBAC
+i# EPIBAC
+
 Pipeline for basic bioinformatic analysis of bacteria and study of AMR and MLST.
 
 # Instalación de CONDA
@@ -66,7 +67,7 @@ conda install mamba
 Éste será el primer ambiente que instalemos que llamaremos `snake`. Al instalarlo con `mamba`, irá mucho más rápido.
 
 ```
-mamba create -n snake -c conda-forge bioconda::snakemake=7.32 bioconda::snakemake-minimal=7.32 snakemake-wrapper-utils
+mamba create -n snake -c conda-forge bioconda::snakemake=7.32 bioconda::snakemake-minimal=7.32 snakemake-wrapper-utils pandas openpyxl
 ```
 
 ## Cargamos ambiente SNAKE
@@ -104,6 +105,12 @@ snakemake --config samples=test/samplesheet.tsv outdir=test/out logdir=test/log 
 
 Aquí analizaremos una muestra anonimizada para comprobar que todos los pasos se realizan correctamente.
 
+## Relanzar pipeline
+En caso de que hubiéramos tenido algún error podríamos volver a intentar lanzar el pipeline añadiendo la opción `--rerun-incomplete`
+```
+snakemake --config samples=test/samplesheet.tsv outdir=test/out logdir=test/log --use-conda -j 8 --rerun-incomplete
+```
+
 
 ## Fichero config.yaml
 
@@ -117,3 +124,14 @@ Durante las ejecuciones de los análisis es posible que notemos alguna ralentiza
 
 En caso de correr los análisis bajo un entorno virtual como `VirtualBox`, habrá que tener en cuenta este coste, de mantener dos sistemas operativos en una misma máquina y tal vez reducir el número de procesadores empleados en `-j`.
 
+## Ejecución SNAKEMAKE + SLURM
+Snakemake permite la integración con SLURM, a falta de configurar, para lanzar todos los trabajos por el gestor de colas. Haría falta una configuración adicional, no planteada en esta primera versión.
+
+[Snakemake Documentation on Cluster Execution](https://snakemake.readthedocs.io/en/stable/executing/cluster.html)
+
+
+# Autores
+
+- Alejandro Sanz-Carbonell
+- Irving Cancino-Muñoz
+- Fernando González-Candelas
