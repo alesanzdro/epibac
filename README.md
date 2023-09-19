@@ -1,6 +1,7 @@
-i# EPIBAC
+# EPIBAC
 
 Pipeline for basic bioinformatic analysis of bacteria and study of AMR and MLST.
+
 
 # Instalación de CONDA
 
@@ -81,6 +82,11 @@ Veremos que el prefijo de `(base)` a cambiado a `(snake) usuario@máquina:$`. De
 
 Es importante realizar los siguientes pasos en un sitio en el que tengamos al menos 50 GBs de espacio. El fichero de instalación GIT no ocupa mucho, pero sí que ocupa más los programas y bases de datos instalados.
 
+La instalación ocupa un mínimo de 26 GB, por lo que mínimo, para lanzar una carrera de Illumina, se necesitarían unos 70 GB - 100 GB.
+
+En posteriores reuniones se hablará de la salida de datos que les interesa a los Hospitales. En caso de sólo querer el informe final, manteniendo siempre una copia de los `RAW_DATA`, se podría reducir algo el espacio final necesario. 
+
+
 ## Clonamos repositorio GIT con el pipeline y los ficheros de prueba
 ```
 git clone https://github.com/alesanzdro/epibac.git
@@ -104,6 +110,13 @@ snakemake --config samples=test/samplesheet.tsv outdir=test/out logdir=test/log 
 ```
 
 Aquí analizaremos una muestra anonimizada para comprobar que todos los pasos se realizan correctamente.
+
+En el siguiente gráfico se muestra el esquema básico de trabajo para una muestra. Los pasos como instalación de las bases de datos sólo se realizaría una vez.
+
+
+![Grafo flujo de trabajos con una muestra](test/dag.png)
+
+
 
 ## Relanzar pipeline
 En caso de que hubiéramos tenido algún error podríamos volver a intentar lanzar el pipeline añadiendo la opción `--rerun-incomplete`
