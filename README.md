@@ -13,7 +13,7 @@ Este pipeline se ha probado en las distribuciones de Linux [Ubuntu 20.04.6 LTS (
 
 # Instalación de CONDA
 
-```
+```bash
 # Creamos directorio donde tendremos instalado CONDA (donde tengamos permisos de escritura)
 mkdir -p ~/miniconda3
 # Descargamos última versión
@@ -29,68 +29,52 @@ rm -rf ~/miniconda3/miniconda.sh
 ## Nos aseguramos de realizar configuración inicial correctamente
 
 Activamos conda:
-```
+```bash
 source ~/miniconda3/etc/profile.d/conda.sh
 ```
 
 Actualizamos conda:
-```
+```bash
 conda update -n base -c defaults conda
 ```
 
 Configuramos conda para que se inicie automáticamente en nuevos shells:
-```
+```bash
 conda init
 ```
 
-Este comando configurará conda para que se inicie automáticamente cuando abres una nueva terminal. Después de ejecutarlo, es posible que debas cerrar y volver a abrir tu terminal para que los cambios surtan efecto.
+Este comando configurará conda para que se inicie automáticamente cuando abres una nueva terminal.
+
+> [!NOTE]
+> Cerramos la terminal y abrimos una nueva, para asegurarnos de que los cambios surtan efecto.
 
 
-## Configuramos PROXY GVA en CONDA
-
-```
-conda config --set proxy_servers.http http_proxy=http://proxy.san.gva.es:8080
-conda config --set proxy_servers.https http_proxy=http://proxy.san.gva.es:8080
-```
-Lo más sencillo sería salir y volver a abrir otra terminal, para que nos cargue el fichero `.bashrc` actualizado con la instalación de CONDA.
-
-Si no podemos cargar de la manera:
-
-```
-# Cargamos fichero fuente configuración
-source ~/.bashrc
-# Aseguramos que se encuentre correctamente CONDA en nuestro sistema
-export PATH="$HOME/miniconda3/bin:$PATH"
-```
 Veremos que en el `prompt` nos ha salid el prefijo `(base)` delante de nuestro usuario y máquina: `(base) usuario@máquina:$`.
 
 Ya estamnos en la "anarquía" de CONDA ;), poder instalar paquetes sin permisos de administrador.
 
-## Añadimos un par de canales básicos como repositorios de paquetes de instalación
+## Configuramos PROXY GVA en CONDA (En caso que haga falta)
+
+```bash
+conda config --set proxy_servers.http http_proxy=http://proxy.san.gva.es:8080
+conda config --set proxy_servers.https http_proxy=http://proxy.san.gva.es:8080
 ```
+
+
+## Añadimos un par de canales básicos como repositorios de paquetes de instalación
+```bash
 conda config --add channels bioconda
 conda config --add channels conda-forge
 ```
 
 
 ## Cambiamos opciones de prioridad de canales
-```
+```bash
 conda config --set channel_priority strict
 ```
 
-## Actualizamos CONDA a la última versión
-```
-conda update conda
-```
-
-## Podemos ver la información básica de la instalación realizada de CONDA
-```
-conda info -a
-```
-
-
 # Instalamos MAMBA, como gestor de paquetes en base (ambiente inicial de CONDA)
-```
+```bash
 conda install mamba
 ```
 
@@ -98,12 +82,12 @@ conda install mamba
 
 Éste será el primer ambiente que instalemos que llamaremos `snake`. Al instalarlo con `mamba`, irá mucho más rápido.
 
-```
+```bash
 mamba create -n snake -c conda-forge bioconda::snakemake=7.32 bioconda::snakemake-minimal=7.32 snakemake-wrapper-utils pandas openpyxl
 ```
 
 ## Cargamos ambiente SNAKE
-```
+```bash
 conda activate snake
 ```
 Veremos que el prefijo de `(base)` a cambiado a `(snake) usuario@máquina:$`. Deberemos cargar este ambiente siempre que querramos lanzar un pipeline de Snakemake.
@@ -119,12 +103,12 @@ En posteriores reuniones se hablará de la salida de datos que les interesa a lo
 
 
 ## Clonamos repositorio GIT con el pipeline y los ficheros de prueba
-```
+```bash
 git clone https://github.com/EpiMol/epibac.git
 ```
 
 ## Corremos test de prueba que también nos servirá para instalar todos los programas necesarios y bases de datos
-```
+```bash
 # Nos situamos dentro de la carpeta "epibac"
 cd epibac	
 ```
@@ -136,7 +120,7 @@ Si vamos cambiando de carpeta cada vez, estaríamos generando una nueva instalac
 
 Para cambiar de carrera, sería modificar el fichero `config.yaml` o modificar los directorios de ejecución al ejecutar el comando.
 
-```
+```bash
 snakemake --config samples=test/samplesheet.tsv outdir=test/out logdir=test/log --use-conda -j 8
 ```
 
@@ -158,7 +142,7 @@ Y el resultado debería dar:
 
 ## Relanzar pipeline
 En caso de que hubiéramos tenido algún error podríamos volver a intentar lanzar el pipeline añadiendo la opción `--rerun-incomplete`
-```
+```bash
 snakemake --config samples=test/samplesheet.tsv outdir=test/out logdir=test/log --use-conda -j 8 --rerun-incomplete
 ```
 
