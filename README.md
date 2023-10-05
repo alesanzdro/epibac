@@ -8,6 +8,10 @@ Example of the excel obtained as analysis results from a run.
 ![Example_EXCEL](test/Ejemplo_resultados_run.png)
 
 
+# Introducción
+
+[VIDEO INSTALACIÓN DESDE 0:](https://youtu.be/9AVAYzeB3no)
+
 Este pipeline se ha probado en las distribuciones de Linux [Ubuntu 20.04.6 LTS (Focal Fossa)](https://releases.ubuntu.com/focal/) y [Ubuntu 22.04.3 LTS (Jammy Jellyfish)](https://releases.ubuntu.com/jammy/).
 
 
