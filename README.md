@@ -33,6 +33,23 @@ Activamos conda:
 source ~/miniconda3/etc/profile.d/conda.sh
 ```
 
+Configuramos PROXY GVA en CONDA (en caso que haga falta)
+```bash
+conda config --set proxy_servers.http http_proxy=http://proxy.san.gva.es:8080
+conda config --set proxy_servers.https http_proxy=http://proxy.san.gva.es:8080
+```
+
+Añadimos un par de canales básicos como repositorios de paquetes de instalación
+```bash
+conda config --add channels bioconda
+conda config --add channels conda-forge
+```
+
+Cambiamos opciones de prioridad de canales
+```bash
+conda config --set channel_priority strict
+```
+
 Actualizamos conda:
 ```bash
 conda update -n base -c defaults conda
@@ -54,25 +71,7 @@ Veremos que en el `prompt` nos ha salid el prefijo `(base)` delante de nuestro u
 
 Ya estamnos en la "anarquía" de CONDA ;), poder instalar paquetes sin permisos de administrador.
 
-## Configuramos PROXY GVA en CONDA (En caso que haga falta)
 
-```bash
-conda config --set proxy_servers.http http_proxy=http://proxy.san.gva.es:8080
-conda config --set proxy_servers.https http_proxy=http://proxy.san.gva.es:8080
-```
-
-
-## Añadimos un par de canales básicos como repositorios de paquetes de instalación
-```bash
-conda config --add channels bioconda
-conda config --add channels conda-forge
-```
-
-
-## Cambiamos opciones de prioridad de canales
-```bash
-conda config --set channel_priority strict
-```
 
 # Instalamos MAMBA, como gestor de paquetes en base (ambiente inicial de CONDA)
 ```bash
