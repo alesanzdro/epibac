@@ -73,7 +73,7 @@ Ya estamnos en la "anarquía" de CONDA ;), poder instalar paquetes sin permisos 
 
 
 
-# Instalamos MAMBA, como gestor de paquetes en `base (ambiente inicial de CONDA)
+# Instalamos MAMBA, como gestor de paquetes en `base` (ambiente inicial de CONDA)
 ```bash
 conda install mamba
 ```
