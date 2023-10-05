@@ -49,11 +49,13 @@ Actualizamos conda:
 ```bash
 conda update -n base -c defaults conda
 ```
+(Puede tardar un par de minutos)
 
 Instalamos MAMBA, como gestor de paquetes en `base` (ambiente inicial de CONDA)
 ```bash
 conda install mamba
 ```
+(Puede tardar un par de minutos)
 
 Cambiamos opciones de prioridad de canales 
 ```bash
