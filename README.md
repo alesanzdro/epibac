@@ -35,8 +35,8 @@ source ~/miniconda3/etc/profile.d/conda.sh
 
 Configuramos PROXY GVA en CONDA (en caso que haga falta)
 ```bash
-conda config --set proxy_servers.http http_proxy=http://proxy.san.gva.es:8080
-conda config --set proxy_servers.https http_proxy=http://proxy.san.gva.es:8080
+conda config --set proxy_servers.http http://proxy.san.gva.es:8080
+conda config --set proxy_servers.https http://proxy.san.gva.es:8080
 ```
 
 Añadimos un par de canales básicos como repositorios de paquetes de instalación
