@@ -33,34 +33,18 @@ Activamos conda:
 source ~/miniconda3/etc/profile.d/conda.sh
 ```
 
-```bash
-echo 'channel_priority: strict
-channels:
-  - r
-  - conda-forge
-  - bioconda
-  - defaults
-proxy_servers:
-  https: http://proxy.san.gva.es:8080
-  http: http://proxy.san.gva.es:8080' > $HOME/.condarc
-```
-
 Configuramos PROXY GVA en CONDA (en caso que haga falta):
 ```bash
 conda config --set proxy_servers.http http://proxy.san.gva.es:8080
 conda config --set proxy_servers.https http://proxy.san.gva.es:8080
 ```
-Añadimos un par de canales básicos como repositorios de paquetes de instalación:
-```bash
-conda config --add channels bioconda
-conda config --add channels conda-forge
-```
+
 Configuramos conda para que se inicie automáticamente en nuevos shells:
 ```bash
 conda init
 ```
-Este comando configurará conda para que se inicie automáticamente cuando abres una nueva terminal.
 
+Este comando configurará conda para que se inicie automáticamente cuando abres una nueva terminal.
 
 
 > [!NOTE]
