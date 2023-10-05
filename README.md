@@ -65,13 +65,12 @@ conda install -n base -c conda-forge mamba
 ```
 (Puede tardar un par de minutos)
 
+
 Actualizamos el entorno `base` en CONDA:
 ```bash
 conda update -n base -c defaults conda
 ```
 (Puede tardar un par de minutos)
-
-
 
 
 Cambiamos opciones de prioridad de canales :
