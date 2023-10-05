@@ -60,7 +60,7 @@ Veremos que en el `prompt` nos ha salid el prefijo `(base)` delante de nuestro u
 Ya estamnos en la "anarquía" de CONDA ;), poder instalar paquetes sin permisos de administrador.
 
 
-# Instalamos MAMBA
+# Instalamos MAMBA mediante CONDA
 
 Emplearemos **mamba** como gestor o instalador de paquetes en el ambiente inicial de conda, también llamado `base`.
 
@@ -80,7 +80,7 @@ En el contexto de Snakemake, donde la reproducibilidad y la consistencia son ese
 
 
 
-# Creamos ambiente de SNAKEMAKE con el que correremos el análisis
+# Creamos ambiente de SNAKEMAKE con el que correremos el análisis mediante MAMBA
 
 Éste será el primer ambiente que instalemos que llamaremos `snake`. Al instalarlo con `mamba`, irá mucho más rápido.
 
