@@ -45,11 +45,6 @@ conda config --add channels bioconda
 conda config --add channels conda-forge
 ```
 
-Cambiamos opciones de prioridad de canales
-```bash
-conda config --set channel_priority strict
-```
-
 Actualizamos conda:
 ```bash
 conda update -n base -c defaults conda
@@ -59,6 +54,12 @@ Instalamos MAMBA, como gestor de paquetes en `base` (ambiente inicial de CONDA)
 ```bash
 conda install mamba
 ```
+
+Cambiamos opciones de prioridad de canales 
+```bash
+conda config --set channel_priority strict
+```
+En el contexto de Snakemake, donde la reproducibilidad y la consistencia son esenciales para garantizar que los flujos de trabajo se ejecuten de manera predecible en diferentes entornos, se recomienda establecer `channel_priority` en "strict". Esto ayudará a evitar problemas de resolución de dependencias que podrían surgir debido a la flexibilidad en la búsqueda de canales.
 
 Configuramos conda para que se inicie automáticamente en nuevos shells:
 ```bash
