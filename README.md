@@ -8,6 +8,8 @@ Example of the excel obtained as analysis results from a run.
 ![Example_EXCEL](test/Ejemplo_resultados_run.png)
 
 
+Este pipeline se ha probado en las distribuciones de Linux [Ubuntu 20.04.6 LTS (Focal Fossa)](https://releases.ubuntu.com/focal/) y [Ubuntu 22.04.3 LTS (Jammy Jellyfish)](https://releases.ubuntu.com/jammy/).
+
 
 # Instalación de CONDA
 
@@ -23,6 +25,26 @@ bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
 # Borramos archivo de instalación
 rm -rf ~/miniconda3/miniconda.sh
 ```
+
+## Nos aseguramos de realizar configuración inicial correctamente
+
+Activamos conda:
+```
+source ~/miniconda3/etc/profile.d/conda.sh
+```
+
+Actualizamos conda:
+```
+conda update -n base -c defaults conda
+```
+
+Configuramos conda para que se inicie automáticamente en nuevos shells:
+```
+conda init
+```
+
+Este comando configurará conda para que se inicie automáticamente cuando abres una nueva terminal. Después de ejecutarlo, es posible que debas cerrar y volver a abrir tu terminal para que los cambios surtan efecto.
+
 
 ## Cargamos ambiente inicital de CONDA (base)
 
