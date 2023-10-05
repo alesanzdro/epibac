@@ -51,7 +51,7 @@ Este comando configurará conda para que se inicie automáticamente cuando abres
 > Cerramos la terminal y abrimos una nueva, para asegurarnos de que los cambios surtan efecto.
 
 
-Veremos que en el `prompt` nos ha salid el prefijo `(base)` delante de nuestro usuario y máquina: `(base) usuario@máquina:$`.
+Veremos que en el `prompt` nos ha salido el prefijo `(base)` delante de nuestro usuario y máquina: `(base) usuario@máquina:$`.
 
 Ya estamnos en la "anarquía" de CONDA ;), poder instalar paquetes sin permisos de administrador.
 
@@ -81,9 +81,9 @@ En el contexto de Snakemake, donde la reproducibilidad y la consistencia son ese
 
 
 
-# Creamos ambiente de SNAKEMAKE con el que correremos el análisis mediante MAMBA
+# Creamos ambiente con SNAKEMAKE mediante MAMBA
 
-Éste será el primer ambiente que instalemos que llamaremos `snake`. Al instalarlo con `mamba`, irá mucho más rápido.
+Éste será el único ambiente que instalaremos manualmente y que llamaremos `snake`. Al instalarlo con `mamba`, irá mucho más rápido.
 
 ```bash
 mamba create -n snake -c conda-forge bioconda::snakemake=7.32 bioconda::snakemake-minimal=7.32 snakemake-wrapper-utils pandas openpyxl
