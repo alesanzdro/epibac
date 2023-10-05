@@ -46,8 +46,12 @@ conda init
 Este comando configurará conda para que se inicie automáticamente cuando abres una nueva terminal. Después de ejecutarlo, es posible que debas cerrar y volver a abrir tu terminal para que los cambios surtan efecto.
 
 
-## Cargamos ambiente inicital de CONDA (base)
+## Configuramos PROXY GVA en CONDA
 
+```
+conda config --set proxy_servers.http http_proxy=http://proxy.san.gva.es:8080
+conda config --set proxy_servers.https http_proxy=http://proxy.san.gva.es:8080
+```
 Lo más sencillo sería salir y volver a abrir otra terminal, para que nos cargue el fichero `.bashrc` actualizado con la instalación de CONDA.
 
 Si no podemos cargar de la manera:
