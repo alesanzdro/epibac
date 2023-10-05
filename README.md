@@ -60,16 +60,18 @@ Ya estamnos en la "anarquía" de CONDA ;), poder instalar paquetes sin permisos 
 
 Emplearemos **mamba** como gestor o instalador de paquetes en el ambiente inicial de conda, también llamado `base`.
 
+```bash
+conda install -n base -c conda-forge mamba
+```
+(Puede tardar un par de minutos)
+
 Actualizamos el entorno `base` en CONDA:
 ```bash
 conda update -n base -c defaults conda
 ```
 (Puede tardar un par de minutos)
 
-```bash
-conda install -n base -c conda-forge mamba
-```
-(Puede tardar un par de minutos)
+
 
 
 Cambiamos opciones de prioridad de canales :
