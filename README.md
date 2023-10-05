@@ -38,25 +38,11 @@ Configuramos PROXY GVA en CONDA (en caso que haga falta):
 conda config --set proxy_servers.http http://proxy.san.gva.es:8080
 conda config --set proxy_servers.https http://proxy.san.gva.es:8080
 ```
-
-Instalamos MAMBA, como gestor de paquetes en `base` (ambiente inicial de CONDA):
-```bash
-conda install -c conda-forge mamba
-```
-(Puede tardar un par de minutos)
-
 Añadimos un par de canales básicos como repositorios de paquetes de instalación:
 ```bash
 conda config --add channels bioconda
 conda config --add channels conda-forge
 ```
-
-Cambiamos opciones de prioridad de canales :
-```bash
-conda config --set channel_priority strict
-```
-En el contexto de Snakemake, donde la reproducibilidad y la consistencia son esenciales para garantizar que los flujos de trabajo se ejecuten de manera predecible en diferentes entornos, se recomienda establecer `channel_priority` en "strict". Esto ayudará a evitar problemas de resolución de dependencias que podrían surgir debido a la flexibilidad en la búsqueda de canales.
-
 Configuramos conda para que se inicie automáticamente en nuevos shells:
 ```bash
 conda init
@@ -72,6 +58,24 @@ Este comando configurará conda para que se inicie automáticamente cuando abres
 Veremos que en el `prompt` nos ha salid el prefijo `(base)` delante de nuestro usuario y máquina: `(base) usuario@máquina:$`.
 
 Ya estamnos en la "anarquía" de CONDA ;), poder instalar paquetes sin permisos de administrador.
+
+
+# Instalamos MAMBA:
+
+Emplearemos **mamba** como gestor o instalador de paquetes en el ambiente inicial de conda, también llamado `base`.
+
+```bash
+conda install -c conda-forge -n base mamba
+```
+(Puede tardar un par de minutos)
+
+
+Cambiamos opciones de prioridad de canales :
+```bash
+conda config --set channel_priority strict
+```
+En el contexto de Snakemake, donde la reproducibilidad y la consistencia son esenciales para garantizar que los flujos de trabajo se ejecuten de manera predecible en diferentes entornos, se recomienda establecer `channel_priority` en "strict". Esto ayudará a evitar problemas de resolución de dependencias que podrían surgir debido a la flexibilidad en la búsqueda de canales.
+
 
 
 
