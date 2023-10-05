@@ -61,18 +61,21 @@ Ya estamnos en la "anarquía" de CONDA ;), poder instalar paquetes sin permisos 
 Emplearemos **mamba** como gestor o instalador de paquetes en el ambiente inicial de conda, también llamado `base`.
 
 ```bash
-conda install -c conda-forge -n base mamba
+conda install -n base -c conda-forge mamba
 ```
 (Puede tardar un par de minutos)
 
+
+Actualizamos el entorno `base` en CONDA:
+```bash
+conda update -n base -c defaults conda
+```
 
 Cambiamos opciones de prioridad de canales :
 ```bash
 conda config --set channel_priority strict
 ```
 En el contexto de Snakemake, donde la reproducibilidad y la consistencia son esenciales para garantizar que los flujos de trabajo se ejecuten de manera predecible en diferentes entornos, se recomienda establecer `channel_priority` en "strict". Esto ayudará a evitar problemas de resolución de dependencias que podrían surgir debido a la flexibilidad en la búsqueda de canales.
-
-
 
 
 
