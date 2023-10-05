@@ -55,12 +55,17 @@ Actualizamos conda:
 conda update -n base -c defaults conda
 ```
 
+Instalamos MAMBA, como gestor de paquetes en `base` (ambiente inicial de CONDA)
+```bash
+conda install mamba
+```
+
 Configuramos conda para que se inicie automáticamente en nuevos shells:
 ```bash
 conda init
 ```
-
 Este comando configurará conda para que se inicie automáticamente cuando abres una nueva terminal.
+
 
 
 > [!NOTE]
@@ -73,12 +78,8 @@ Ya estamnos en la "anarquía" de CONDA ;), poder instalar paquetes sin permisos 
 
 
 
-# Instalamos MAMBA, como gestor de paquetes en `base` (ambiente inicial de CONDA)
-```bash
-conda install mamba
-```
 
-# Creamos ambiente de SNAKEMAKE
+# Creamos ambiente de SNAKEMAKE con el que correremos el análisis
 
 Éste será el primer ambiente que instalemos que llamaremos `snake`. Al instalarlo con `mamba`, irá mucho más rápido.
 
