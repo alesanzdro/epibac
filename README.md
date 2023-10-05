@@ -33,6 +33,18 @@ Activamos conda:
 source ~/miniconda3/etc/profile.d/conda.sh
 ```
 
+```bash
+echo 'channel_priority: strict
+channels:
+  - r
+  - conda-forge
+  - bioconda
+  - defaults
+proxy_servers:
+  https: http://proxy.san.gva.es:8080
+  http: http://proxy.san.gva.es:8080' > $HOME/.condarc
+```
+
 Configuramos PROXY GVA en CONDA (en caso que haga falta):
 ```bash
 conda config --set proxy_servers.http http://proxy.san.gva.es:8080
