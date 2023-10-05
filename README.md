@@ -44,10 +44,11 @@ conda init
 ```
 
 Este comando configurará conda para que se inicie automáticamente cuando abres una nueva terminal.
-<br>
+
+
 > [!NOTE]
 > Cerramos la terminal y abrimos una nueva, para asegurarnos de que los cambios surtan efecto.
-<br>
+
 
 Veremos que en el `prompt` nos ha salid el prefijo `(base)` delante de nuestro usuario y máquina: `(base) usuario@máquina:$`.
 
