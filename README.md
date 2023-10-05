@@ -60,7 +60,7 @@ Veremos que en el `prompt` nos ha salid el prefijo `(base)` delante de nuestro u
 Ya estamnos en la "anarquía" de CONDA ;), poder instalar paquetes sin permisos de administrador.
 
 
-# Instalamos MAMBA:
+# Instalamos MAMBA
 
 Emplearemos **mamba** como gestor o instalador de paquetes en el ambiente inicial de conda, también llamado `base`.
 
