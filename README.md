@@ -89,6 +89,17 @@ En el contexto de Snakemake, donde la reproducibilidad y la consistencia son ese
 mamba create -n snake -c conda-forge bioconda::snakemake=7.32 bioconda::snakemake-minimal=7.32 snakemake-wrapper-utils pandas openpyxl
 ```
 
+# Desistalación CONDA (¡en caso de que queramos restaurar lo que hayamos hecho!)
+
+Eliminamos la inicialización de conda hecho con `conda init`, carpeta `miniconda3` y las carpetas o ficheros de configuración de conda ocultos. 
+```bash
+sudo sed '/# >>> conda initialize >>>/,/# <<< conda initialize <<</d' -i ~/.bashrc
+sudo rm -r $HOME/miniconda3
+sudo rm -r $HOME/.conda*
+```
+(Puede tardar un par de minutos)
+
+
 ## Cargamos ambiente SNAKE
 ```bash
 conda activate snake
