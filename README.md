@@ -53,7 +53,7 @@ conda update -n base -c defaults conda
 
 Instalamos MAMBA, como gestor de paquetes en `base` (ambiente inicial de CONDA)
 ```bash
-conda install mamba
+conda install -c conda-forge mamba
 ```
 (Puede tardar un par de minutos)
 
