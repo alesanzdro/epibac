@@ -148,6 +148,49 @@ En caso de que hubiéramos tenido algún error podríamos volver a intentar lanz
 snakemake --config samples=test/samplesheet.tsv outdir=test/out logdir=test/log --use-conda -j 8 --rerun-incomplete
 ```
 
+# Lanzar un análisis con mis propias muestras
+
+
+> [!NOTE]
+> IMPORTANTE, tenemos que ejecutar todos los análisis desde el directorio que hayamos instalado `epibac` o se nos volverá a instalar todo dentro de la carpeta oculta `.snakemake`
+
+
+## Situar ficheros FASTQ para analizar
+
+Si tenemos `epibac` dentro de nuestra HOME:
+```bash
+cd $HOME/epibac
+```
+
+Dentro de la carpeta epibac creo la carpeta RAWDATA
+```bash
+mkdir -p RAWDATA
+```
+
+Dentro es donde pondré las carpetas de las carreras, por ejemplo:
+
+`RAWDATA/231004_NLSAR001`
+
+Dentro de esa carpeta debe haber una carpeta llamada "fastq" conteniendo todos los FASTQ para analizar de esa carrera, tanto R1 como R2 y con un esquema similar de nombres (se puede adaptar a otras nomenclaturas).
+
+De modo que si tenemos la carpeta `epibac` en nuestra HOME, tendríamos los *fastq.gz de la carrera que quiero analizar en `$HOME/epibac/RAWDATA/231004_NLSAR001/fastq`.
+
+## Creamos samplesheet
+
+```bash
+# Para facilitar no redundar tanto el código asigno a la variable `NAME` el nombre de la carrera que queremos analizar
+NAME="231004_NLSAR001"
+python scripts/do_samplesheet.py RAWDATA/$NAME/fastq RAWDATA/$NAME/samplesheet_$NAME.csv
+```
+
+## Corremos análisis
+```bash
+NAME="231004_NLSAR001"
+snakemake --config samples=RAWDATA/$NAME/samplesheet_$NAME.csv outdir=OUT/$NAME logdir=LOG/$NAME --use-conda -j 8
+```
+
+De esa manera tendremos los arhivos originales en `RAWDATA`, en `OUT` los resultados y en `LOG` los ficheros "log" de los trabajos realizados durante el flujo de trabajo.
+
 
 ## Fichero config.yaml
 
@@ -160,6 +203,11 @@ Por lo tanto en equipos más potentes, con CPUs más rápidas y un mayor número
 Durante las ejecuciones de los análisis es posible que notemos alguna ralentización del sistema.
 
 En caso de correr los análisis bajo un entorno virtual como `VirtualBox`, habrá que tener en cuenta este coste, de mantener dos sistemas operativos en una misma máquina y tal vez reducir el número de procesadores empleados en `-j`.
+
+## Si queremos borrar la instalación de snakemake
+```bash
+rm -r $HOME/epibac/.snakemake
+```
 
 ## Ejecución SNAKEMAKE + SLURM
 Snakemake permite la integración con SLURM, a falta de configurar, para lanzar todos los trabajos por el gestor de colas. Haría falta una configuración adicional, no planteada en esta primera versión.
