@@ -6,9 +6,9 @@ from datetime import datetime
 
 min_version("7.32")
 
-#singularity: "docker://continuumio/miniconda3:4.6.14"
+##singularity: "docker://continuumio/miniconda3:4.6.14"
 
-#report: "report/workflow.rst"
+##report: "report/workflow.rst"
 
 ###### Config file and sample sheets #####
 configfile: "config.yaml"
