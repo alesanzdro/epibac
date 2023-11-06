@@ -58,8 +58,9 @@ rule setup_prokka_database:
         tar -xvzf $CONDA_PREFIX/db/hmm/hmm_PGAP.HMM.tgz -C $CONDA_PREFIX/db/hmm/ &>> {log}
 
         # Concatenamos todos en un solo fichero
-        cat $CONDA_PREFIX/db/hmm/hmm_PGAP/*.HMM > $CONDA_PREFIX/db/hmm/PGAP.hmm
-        
+        #cat $CONDA_PREFIX/db/hmm/hmm_PGAP/*.HMM > $CONDA_PREFIX/db/hmm/PGAP.hmm
+        find $CONDA_PREFIX/db/hmm/hmm_PGAP -type f -name "*.HMM" -exec cat {{}} + > $CONDA_PREFIX/db/hmm/PGAP.hmm
+
         echo -e "\n\n$(printf '*%.0s' {{1..25}}) Construimos índice HMMER $(printf '*%.0s' {{1..25}})\n" &>> {log}
         hmmpress $CONDA_PREFIX/db/hmm/PGAP.hmm &>> {log}
 
