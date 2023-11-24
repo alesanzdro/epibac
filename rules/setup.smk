@@ -78,7 +78,6 @@ rule setup_prokka_database:
             prokka --setupdb &>> {log}
 
             # Verifica que los archivos fueron creados correctamente antes de crear el flag
-            # Test
             for ext in "" .h3f .h3i .h3m .h3p; do
                 if [[ ! -f $CONDA_PREFIX/db/hmm/PGAP.hmm$ext ]]; then
                     echo "Error: El archivo PGAP.hmm$ext no fue creado." &>> {log}
