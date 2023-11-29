@@ -15,6 +15,7 @@ Example of the excel obtained as analysis results from a run.
 Este pipeline se ha probado en las distribuciones de Linux [Ubuntu 20.04.6 LTS (Focal Fossa)](https://releases.ubuntu.com/focal/) y [Ubuntu 22.04.3 LTS (Jammy Jellyfish)](https://releases.ubuntu.com/jammy/).
 
 
+
 # Instalación de CONDA
 
 ```bash
@@ -29,6 +30,7 @@ bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
 # Borramos archivo de instalación
 rm -rf ~/miniconda3/miniconda.sh
 ```
+
 
 ## Configuración inicial de CONDA
 
@@ -69,6 +71,15 @@ conda install -n base -c conda-forge mamba
 ```
 (Puede tardar un par de minutos)
 
+> [!NOTE]
+> Es posible que si hay alguna instalación previa de CONDA, nos pueda dar errores por el orden de canales. 
+> Se recomienda una instalación de CONDA desde cero, pero si se quiere partir de una instalación previa y
+> hay conflictos de paquetes o se queda colgado durante mucho tiempo, se puede probar a instalar sin tener
+> en cuenta el fichero de configuración que deberíamos tener en $HOME/.condarc añadiendo la opción de
+> "--override-channels" a la hora de instalar algo en conda, por ejemplo:
+>
+> `conda install --override-channels -n base -c conda-forge mamba
+
 
 Actualizamos el entorno `base` en CONDA:
 ```bash
@@ -82,7 +93,6 @@ Cambiamos opciones de prioridad de canales :
 conda config --set channel_priority strict
 ```
 En el contexto de Snakemake, donde la reproducibilidad y la consistencia son esenciales para garantizar que los flujos de trabajo se ejecuten de manera predecible en diferentes entornos, se recomienda establecer `channel_priority` en "strict". Esto ayudará a evitar problemas de resolución de dependencias que podrían surgir debido a la flexibilidad en la búsqueda de canales.
-
 
 
 # Creamos ambiente con SNAKEMAKE mediante MAMBA
