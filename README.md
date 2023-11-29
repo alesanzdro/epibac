@@ -245,4 +245,5 @@ sudo rm -r $HOME/.conda*
 
 - Alejandro Sanz-Carbonell
 - Irving Cancino-Muñoz
+- Carlos Valiente Mullor
 - Fernando González-Candelas
