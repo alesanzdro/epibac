@@ -66,20 +66,23 @@ Ya estamnos en la "anarquía" de CONDA ;), poder instalar paquetes sin permisos 
 
 Emplearemos **mamba** como gestor o instalador de paquetes en el ambiente inicial de conda, también llamado `base`.
 
+**OPCIÓN 1**
 ```bash
 conda install -n base -c conda-forge mamba
 ```
 (Puede tardar un par de minutos)
 
+**OPCIÓN 2**
 > [!NOTE]
 > Es posible que si hay alguna instalación previa de CONDA, nos pueda dar errores por el orden de canales. 
 > Se recomienda una instalación de CONDA desde cero, pero si se quiere partir de una instalación previa y
 > hay conflictos de paquetes o se queda colgado durante mucho tiempo, se puede probar a instalar sin tener
 > en cuenta el fichero de configuración que deberíamos tener en $HOME/.condarc añadiendo la opción de
 > "--override-channels" a la hora de instalar algo en conda, por ejemplo:
->
-> `conda install --override-channels -n base -c conda-forge mamba
 
+```bash
+conda install --override-channels -n base -c conda-forge mamba
+```
 
 Actualizamos el entorno `base` en CONDA:
 ```bash
