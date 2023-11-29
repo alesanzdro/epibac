@@ -84,7 +84,8 @@ conda install -n base -c conda-forge mamba
 conda install --override-channels -n base -c conda-forge mamba
 ```
 
-Actualizamos el entorno `base` en CONDA:
+# Actualizamos el entorno `base` en CONDA:
+
 ```bash
 conda update -n base -c defaults conda
 ```
