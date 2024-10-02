@@ -19,16 +19,14 @@ Este pipeline se ha probado en las distribuciones de Linux [Ubuntu 20.04.6 LTS (
 # Instalación de CONDA
 
 ```bash
-# Creamos directorio donde tendremos instalado CONDA (donde tengamos permisos de escritura)
-mkdir -p ~/miniconda3
-# Descargamos última versión
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+# Descargamos última versión de CONDA en la HOME
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
 # Damos permisos al script de instalación
-chmod u+x ~/miniconda3/miniconda.sh
+chmod u+x ~/miniconda.sh
 # Instalamos de manera desatendida
-bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+bash ~/miniconda.sh -b -u -p ~/miniconda3
 # Borramos archivo de instalación
-rm -rf ~/miniconda3/miniconda.sh
+rm -rf ~/miniconda.sh
 ```
 
 
@@ -45,6 +43,13 @@ conda config --set proxy_servers.http http://proxy.san.gva.es:8080
 conda config --set proxy_servers.https http://proxy.san.gva.es:8080
 ```
 
+Añadimos canales de forma explícita:
+
+```bash
+conda config --add channels conda-forge
+conda config --add channels defaults
+```
+
 Configuramos conda para que se inicie automáticamente en nuevos shells:
 ```bash
 conda init
@@ -52,19 +57,31 @@ conda init
 
 Este comando configurará conda para que se inicie automáticamente cuando abres una nueva terminal.
 
-
 > [!NOTE]
 > Cerramos la terminal y abrimos una nueva, para asegurarnos de que los cambios surtan efecto.
 
+Nos aseguramos que tenemos la última versión tanto de conda como de los paquetes del entorno base:
+```bash
+conda update conda
+conda update --all
+```
 
 Veremos que en el `prompt` nos ha salido el prefijo `(base)` delante de nuestro usuario y máquina: `(base) usuario@máquina:$`.
 
-Ya estamnos en la "anarquía" de CONDA ;), poder instalar paquetes sin permisos de administrador.
+Ya estramos en la libertad de CONDA ;), poder instalar paquetes sin permisos de administrador.
 
 
 # Instalamos MAMBA mediante CONDA
 
-Emplearemos **mamba** como gestor o instalador de paquetes en el ambiente inicial de conda, también llamado `base`.
+Emplearemos **mamba** como gestor o instalador de paquetes en el ambiente inicial de conda, también llamado `base`. 
+
+Para evitar problemas con `conda-libmamba-solver` establecemos primero la prioridad de canales en `strict`:
+
+```bash
+conda config --set channel_priority strict
+```
+
+En el contexto de Snakemake, el gestor de flujo de trabajo que emplearemos, la reproducibilidad y la consistencia son esenciales para garantizar que los flujos de trabajo se ejecuten de manera predecible en diferentes entornos, se recomienda establecer `channel_priority` en "strict". Esto ayudará a evitar problemas de resolución de dependencias que podrían surgir debido a la flexibilidad en la búsqueda de canales.
 
 **OPCIÓN 1**
 ```bash
@@ -83,20 +100,6 @@ conda install -n base -c conda-forge mamba
 ```bash
 conda install --override-channels -n base -c conda-forge mamba
 ```
-
-# Actualizamos el entorno `base` en CONDA:
-
-```bash
-conda update -n base -c defaults conda
-```
-(Puede tardar un par de minutos)
-
-
-Cambiamos opciones de prioridad de canales :
-```bash
-conda config --set channel_priority strict
-```
-En el contexto de Snakemake, donde la reproducibilidad y la consistencia son esenciales para garantizar que los flujos de trabajo se ejecuten de manera predecible en diferentes entornos, se recomienda establecer `channel_priority` en "strict". Esto ayudará a evitar problemas de resolución de dependencias que podrían surgir debido a la flexibilidad en la búsqueda de canales.
 
 
 # Creamos ambiente con SNAKEMAKE mediante MAMBA
