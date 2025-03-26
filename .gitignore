@@ -20,3 +20,5 @@
 !test/*
 !test/raw_data
 !test/raw_data/*
+!schemes  
+!schemes/*
