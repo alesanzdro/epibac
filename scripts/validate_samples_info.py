@@ -3,7 +3,7 @@
 
 """
 Usage:
-  python validate_samples.py samples_info.csv samples.schema.yaml config.yaml validation_warnings.txt
+  python validate_samples.py samples_info.csv samples.schema.yaml config.yaml validation_warnings.txt samples_info_validated.csv
 
 Proceso:
 1. Detecta el separador (',' o ';') y comillas en samples_info.csv.
@@ -29,14 +29,15 @@ from snakemake.utils import validate
 import pandas as pd
 
 def main():
-    if len(sys.argv) < 5:
-        print("Error: faltan argumentos.\nUso:\n  python validate_samples.py samples.csv schema.yaml config.yaml warnings_log.txt")
+    if len(sys.argv) < 6:
+        print("Error: faltan argumentos.\nUso:\n  python validate_samples.py samples.csv schema.yaml config.yaml warnings_log.txt samples_info_validated.csv")
         sys.exit(1)
 
     samples_csv = sys.argv[1]
     schema_yaml = sys.argv[2]
     config_yaml = sys.argv[3]
     warnings_log = sys.argv[4]
+    samples_info_validated = sys.argv[5]
 
     # 1) Leer config.yaml
     with open(config_yaml, "r") as fconf:
@@ -247,6 +248,26 @@ def main():
             identificador = pet if pet else f"linea_{line_no}"
             print(f"Línea {line_no} (PETICION {identificador}): {msg}")
         sys.exit(1)
+
+    # Luego de validar todo y no tener errores graves, guardamos el CSV corregido y con las columnas renombradas
+    # en caso de ser mode gva
+    rename_map_gva = {
+    "PETICION": "id",
+    "CODIGO_ORIGEN": "id2",
+    "FECHA_TOMA_MUESTRA": "collection_date",
+    "MO": "organism",
+    "MOTIVO_WGS": "relevance",
+    "CARRERA": "run_id",
+    "ILLUMINA_R1": "illumina_r1",
+    "ILLUMINA_R2": "illumina_r2",
+    "ONT": "nanopore",
+    "MODELO_DORADO": "dorado_model"
+    }
+
+    # Luego del validate(df, schema_yaml), aplicamos el renombrado:
+    df.rename(columns=rename_map_gva, inplace=True)
+   
+    df.to_csv(samples_info_validated, sep=';', index=False)
 
     # Si llegamos aquí sin errores, todo OK
     print(f"Validación de {samples_csv} completada sin errores graves. "\

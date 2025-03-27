@@ -1,7 +1,9 @@
-samples: samplesheet-LSPV013.csv
+samples: "test/samples_info.csv"
 
-outdir: "out"
-logdir: "log"
+mode: "gva"  # Puede ser "normal" o "gva"
+
+outdir: "results"
+logdir: "logs"
 
 params:
     min_reads: 1000
@@ -9,11 +11,10 @@ params:
         extra: "--cut_tail --cut_window_size=10 --cut_mean_quality=20 --length_required=50 --correction"
     unicycler:
         extra: "--keep 0"
-    #    extra: "--keep 0 --no_pilon --no_correct"
     resfinder:
         extra: "-l 0.6 -t 0.8 --acquired"
     #kraken2:
-    #    db: db_kraken
+    #    db: "db_kraken"
 
 resources:
     default:
@@ -64,3 +65,129 @@ resources:
         threads: 2
         mem: 6000
         walltime: 480
+
+
+species:
+  acinetobacter_lwoffii: # min 3000000 max 3500000
+    genome_size: 3247623
+    refseq: CP041780.1
+  achromobacter_insolitus: # min 3000000 max 3500000 (aprox para achromobacter spp.)
+    genome_size: 6492697
+    refseq: GCA_002285375.1
+  achromobacter_piechaudii: # min 6000000 max 6800000
+    genome_size: 6300000
+    refseq: GCA_902859685.1
+  achromobacter_xylosoxidans: # min 6700000 max 7100000
+    genome_size: 6900000
+    refseq: GCA_016728825.1
+  aeromonas_caviae: # min ~4500000 max ~4700000
+    genome_size: 4600000
+    refseq: CP024198.1
+  aeromonas_hydrophila: # min ~4700000 max ~5200000
+    genome_size: 5000000
+    refseq: NC_008570.1
+  aeromonas_veronii: # min ~4500000 max ~5000000
+    genome_size: 4800000
+    refseq: CP002607.1
+  brevibacillus_nitrificans: # min ~4000000 max ~4500000 (aprox con base en brevibacillus spp.)
+    genome_size: 4000000
+    refseq: GCA_900618435.1
+  candida_auris: # min ~12000000 max ~12400000 (hongo)
+    genome_size: 12400000
+    refseq: GCA_002759435.2
+  citrobacter_amalonaticus: # min ~5500000 max ~5600000
+    genome_size: 5000000
+    refseq: CP011132.1
+  citrobacter_braaki: # (posible c. braakii) min ~5000000 max ~5300000
+    genome_size: 5000000
+    refseq: CP020448.1
+  citrobacter_freundii: # min ~4900000 max ~5300000
+    genome_size: 5000000
+    refseq: NC_010465.1
+  citrobacter_freundii_complex: # min ~4900000 max ~5300000
+    genome_size: 5000000
+    refseq: GCA_001543195.1
+  enterobacter_asburiae: # min ~4500000 max ~4800000
+    genome_size: 4561905
+    refseq: CP007546.1
+  enterobacter_cloacae: # min ~4700000 max ~5300000
+    genome_size: 5100000
+    refseq: CP001918.1
+  enterobacter_cloacae_complex: # min ~4700000 max ~5300000
+    genome_size: 5000000
+    refseq: CP039558.1
+  enterobacter_kobei: # min ~4700000 max ~4800000
+    genome_size: 4726582
+    refseq: GCA_001021235.1
+  enterococcus_faecium: # min ~2700000 max ~3000000
+    genome_size: 2700000
+    refseq: CP003583.1
+  escherichia_coli: # min ~4700000 max ~5200000
+    genome_size: 5200000
+    refseq: NC_000913.3
+  klebsiella_oxytoca: # min ~5700000 max ~6000000
+    genome_size: 5800000
+    refseq: CP003218.1
+  klebsiella_pneumoniae: # min ~5300000 max ~5800000
+    genome_size: 5500000
+    refseq: NC_009648.1
+  listeria_monocytogenes: # min ~2900000 max ~3100000
+    genome_size: 2944528
+    refseq: NC_003210.1
+  morganella_morganii: # min ~3700000 max ~3900000
+    genome_size: 3799539
+    refseq: CP004345.1
+  mycobacterium_tuberculosis: # min ~4300000 max ~4450000
+    genome_size: 4411532
+    refseq: NC_000962.3
+  proteus_mirabilis: # min ~4000000 max ~4200000
+    genome_size: 4063606
+    refseq: NC_010554.1
+  pseudomonas_aeruginosa: # min ~6200000 max ~6400000
+    genome_size: 6300000
+    refseq: NC_002516.2
+  pseudomonas_agarici: # min ~5500000 max ~5700000 (aprox con base en pseudomonas spp.)
+    genome_size: 5600000
+    refseq: GCA_001049675.1
+  pseudomonas_alcaligenes: # min ~4900000 max ~5200000
+    genome_size: 5000000
+    refseq: GCA_000983155.1
+  pseudomonas_fluorescens_putida: # min ~6200000 max ~6600000 (híbrido incerto)
+    genome_size: 6500000
+    refseq: GCA_002291485.1
+  pseudomonas_guariconensis: # min ~5000000 max ~5200000
+    genome_size: 5100000
+    refseq: GCA_016008925.1
+  pseudomonas_monteilii: # min ~5600000 max ~5800000
+    genome_size: 5700000
+    refseq: GCA_001889045.1
+  pseudomonas_mosselii: # min ~5300000 max ~5600000
+    genome_size: 5500000
+    refseq: GCA_003046135.1
+  pseudomonas_plecoglossicida: # min ~6200000 max ~6300000
+    genome_size: 6300000
+    refseq: CP010359.1
+  pseudomonas_putida: # min ~6200000 max ~6600000
+    genome_size: 6600000
+    refseq: NC_002947.4
+  pseudomonas_spp: # min ~6100000 max ~6500000 (variable)
+    genome_size: 6200000
+    refseq: GCA_001558415.1
+  pseudomonas_viridiflava: # min ~6000000 max ~6100000
+    genome_size: 6100000
+    refseq: GCA_001594115.1
+  raoultella_ornithinolytica: # min ~5300000 max ~5500000 (pariente de klebsiella spp.)
+    genome_size: 5400000
+    refseq: GCA_004103625.1
+  salmonella_enterica: # min ~4600000 max ~5000000
+    genome_size: 4857432
+    refseq: NC_003197.2
+  serratia_marcescens: # min ~5200000 max ~5400000
+    genome_size: 5300000
+    refseq: CP020546.1
+  staphylococcus_aureus: # min ~2800000 max ~2900000
+    genome_size: 2814816
+    refseq: NC_002745.2
+  stenotrophomonas_maltophilia: # min ~4600000 max ~5000000
+    genome_size: 4900000
+    refseq: NC_010943.1

@@ -4,46 +4,55 @@ from snakemake.utils import validate
 from snakemake.utils import min_version
 from datetime import datetime
 
-min_version("7.32")
+min_version("9.1.1")
 
-##singularity: "docker://continuumio/miniconda3:4.6.14"
-
-##report: "report/workflow.rst"
-
-###### Config file and sample sheets #####
 configfile: "config.yaml"
-#validate(config, schema="schemas/config.schema.yaml")
-
-# snakemake --use-conda -j 20 --dry-run --dag | dot -Tpng > dag.png
+validate(config, schema="schemas/config.schema.yaml")
 
 OUTDIR = config["outdir"]
 LOGDIR = config["logdir"]
 
-#samples = pd.read_csv(config["samples"],sep="\t").set_index("sample", drop=False)
-#validate(samples, schema="schemas/samples.schema.yaml")
+rule validate_samples:
+    """
+    Valida y corrige samples_info.csv generando un archivo corregido y warnings
+    """
+    input:
+        samples=config["samples"],
+        schema="schemas/samples.schema.yaml",
+        config="config.yaml"
+    output:
+        warnings=f"{LOGDIR}/validation_warnings.txt",
+        corrected_samples=f"{OUTDIR}/samples_info_validated.csv"
+    conda:
+        'envs/epibac.yml'
+    shell:
+        """
+        python scripts/validate_samples.py \
+            {input.samples} \
+            {input.schema} \
+            {input.config} \
+            {output.warnings} \
+            {output.corrected_samples}
+        """
 
-samples = pd.read_csv(config["samples"], sep="\t", dtype=str).set_index("sample", drop=False)
-samples.index = samples.index.astype(str)
+# Cargar directamente el archivo validado
+validated_samples = pd.read_csv(f"{OUTDIR}/samples_info_validated.csv", sep=";", dtype=str).set_index("PETICION", drop=False)
 
-# Code for when we have a column named UNIT, for when we need to merge samples (from big samplesheet file)
-#samples = pd.read_csv(config["samples"],sep="\t", dtype=str).set_index(["sample", "unit"], drop=False)
-#samples.index = samples.index.set_levels([i.astype(str) for i in samples.index.levels])  # enforce str in index
-#validate(units, schema="schemas/units.schema.yaml")
+#samples = pd.read_csv(config["samples"], sep="\t", dtype=str).set_index("sample", drop=False)
+#samples.index = samples.index.astype(str)
 
 
 include: "rules/common.smk"
-##### Modules #####include: "rules/setup.smk"
-
-##### Target rules #####
-rule all:
-    input:
-        f"{OUTDIR}/qc/multiqc.html",
-        f"{OUTDIR}/report/{datetime.now().strftime('%y%m%d')}_EPIBAC.tsv"
-   
-
 include: "rules/setup.smk"
 include: "rules/qc.smk"
 include: "rules/assembly.smk"
 include: "rules/annotation.smk"
 include: "rules/amr_mlst.smk"
 include: "rules/report.smk"
+
+rule all:
+    input:
+        f"{LOGDIR}/validation_warnings.txt",
+        f"{OUTDIR}/samples_info_validated.csv",
+        f"{OUTDIR}/qc/multiqc.html",
+        f"{OUTDIR}/report/{datetime.now().strftime('%y%m%d')}_EPIBAC.tsv"

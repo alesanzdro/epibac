@@ -11,11 +11,8 @@ dependencies:
   - multiqc=1.28
   - fastp=0.24.0
   - unicycler=0.5.1
-  #- prokka=1.14.6
   - pyyaml
   - pandas
   - snakemake=9.1.1  
-  #- ncbi-amrfinderplus=4.0.19
-  #- mlst=2.23.0
   - perl-xml-simple
   #- checkm-genome=1.2.2
