@@ -1,0 +1,14 @@
+name: epibac_comparative_panacota
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  # Comparative / Pan-genome
+  - python=3.9
+  - pip
+  - pip:
+      - panacota
+  # Sección especial 'pip:' para instalar desde Git
+  #- pip:
+  #  - git+https://github.com/gem-pasteur/PanACoTA.git

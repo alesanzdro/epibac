@@ -3,30 +3,24 @@ description: "Esquema básico para samples_info.csv"
 type: object
 
 properties:
-  # Siempre requerimos CODIGO_ORIGEN, FECHA_TOMA_MUESTRA, MO
   CODIGO_ORIGEN:
     type: string
     description: "Código de origen de la cepa/muestra (obligatorio en todos los modos)"
-
   FECHA_TOMA_MUESTRA:
     type: string
     description: "Fecha en formato YYYY-MM-DD (la verificación se hace también en el script)."
-
   MO:
     type: string
     description: "Organismo. Si no se conoce, se asignará UNKNOWN en el script."
     default: "UNKNOWN"
-
   # PETICION (solo se exige en GVA, así que no lo marcamos required en el esquema)
   PETICION:
     type: string
     description: "ID de petición (requerido en modo GVA, opcional en normal)."
-
   # CARRERA (solo se exige en modo GVA). No lo ponemos en required. Lo maneja el script.
   CARRERA:
     type: string
     description: "Código AAMMDD_HOSPXXX (modo GVA)."
-
   # Campos Illumina
   ILLUMINA_R1:
     type: string
@@ -36,7 +30,6 @@ properties:
     type: string
     description: "Ruta al FASTQ Illumina R2."
     default: ""
-
   # Campos Nanopore
   ONT:
     type: string
@@ -47,7 +40,6 @@ properties:
     description: "Modelo DORADO a usar (si ONT está presente)."
     default: ""
 
-  # Podrías tener más propiedades...
   # id / id2 en modo normal, etc., pero si no existen siempre, no los ponemos en required.
   id:
     type: string
@@ -58,7 +50,7 @@ properties:
     description: "ID secundario alternativo (modo normal)."
     default: ""
 
-required:
-  - CODIGO_ORIGEN      # siempre exigido
-  - FECHA_TOMA_MUESTRA
-  - MO
+#required:
+#  - CODIGO_ORIGEN      # siempre exigido
+#  - FECHA_TOMA_MUESTRA
+#  - MO

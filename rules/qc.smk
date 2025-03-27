@@ -32,7 +32,7 @@ checkpoint epibac_fastp_pe:
     log:
         f"{LOGDIR}/fastp/{{sample}}.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_qc.yml'
     threads: get_resource("fastp","threads")
     resources:
         mem_mb = get_resource("fastp","mem"),
@@ -60,7 +60,7 @@ checkpoint epibac_fastp_pe_count:
     log:
         f"{LOGDIR}/count_reads/{{sample}}.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_qc.yml'
     threads: get_resource("read_count","threads")
     resources:
         mem_mb = get_resource("read_count","mem"),
@@ -134,7 +134,7 @@ rule epibac_kraken2:
     log:
         f"{LOGDIR}/kraken2/{{sample}}.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_qc.yml'
     threads: get_resource("kraken2","threads")
     resources:
         mem_mb = get_resource("kraken2","mem"),
@@ -165,7 +165,7 @@ rule epibac_quast:
     log:
         f"{LOGDIR}/quast/{{sample}}.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_qc.yml'
     threads: get_resource("quast","threads")
     resources:
         mem_mb = get_resource("quast","mem"),

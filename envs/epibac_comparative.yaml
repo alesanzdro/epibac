@@ -1,0 +1,21 @@
+name: epibac_comparative
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Comparative / Pan-genome
+  - mash=2.3
+  #- roary=3.13.0
+  # Filogenia
+  - iqtree=2.4.0
+  - snp-sites=2.5.1
+  - snippy=4.6.0
+  - snpeff=5.2
+  - mafft=7.525
+  # Otras utilidades
+  - dnaapler=1.2.0
+  - trimAl=1.5.0
+  - pip
+  - pip:
+    - panacota==1.4.0

@@ -32,22 +32,30 @@ rm -rf ~/miniconda.sh
 
 ## Configuración inicial de CONDA
 
-Activamos conda:
+Cargamos conda:
 ```bash
 source ~/miniconda3/etc/profile.d/conda.sh
 ```
+
+Limpiamos canales anteriores:
+```bash
+conda config --remove-key channels
+```
+
+Añadimos canales de forma explícita:
+```bash
+conda config --append channels conda-forge
+conda config --append channels bioconda
+conda config --append channels defaults
+```
+
+Es posible que salga una advertencia sobre el canal `defaults`.
+
 
 Configuramos PROXY GVA en CONDA (en caso que haga falta):
 ```bash
 conda config --set proxy_servers.http http://proxy.san.gva.es:8080
 conda config --set proxy_servers.https http://proxy.san.gva.es:8080
-```
-
-Añadimos canales de forma explícita:
-
-```bash
-conda config --add channels conda-forge
-conda config --add channels defaults
 ```
 
 Configuramos conda para que se inicie automáticamente en nuevos shells:
@@ -60,7 +68,7 @@ Este comando configurará conda para que se inicie automáticamente cuando abres
 > [!NOTE]
 > Cerramos la terminal y abrimos una nueva, para asegurarnos de que los cambios surtan efecto.
 
-Nos aseguramos que tenemos la última versión tanto de conda como de los paquetes del entorno base:
+Actualizamos a la última versión tanto de conda como de los paquetes del entorno base:
 ```bash
 conda update conda
 conda update --all
@@ -101,13 +109,18 @@ conda install -n base -c conda-forge mamba
 conda install --override-channels -n base -c conda-forge mamba
 ```
 
+Nos aseguramos tener mamba actualizado:
+```bash
+mamba update -n base -c conda-forge mamba
+```
+
 
 # Creamos ambiente con SNAKEMAKE mediante MAMBA
 
 Éste será el único ambiente que instalaremos manualmente y que llamaremos `snake`. Al instalarlo con `mamba`, irá mucho más rápido.
 
 ```bash
-mamba create -n snake -c conda-forge bioconda::snakemake=7.32 bioconda::snakemake-minimal=7.32 snakemake-wrapper-utils pandas openpyxl git
+mamba create -n snake -c conda-forge bioconda::snakemake=9.1.1 bioconda::snakemake-minimal=9.1.1 bioconda::snakemake-wrapper-utils=0.7.2 pandas openpyxl git
 ```
 
 

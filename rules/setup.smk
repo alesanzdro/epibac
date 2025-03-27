@@ -4,7 +4,7 @@ rule setup_kraken2_database:
     log:
         f"{LOGDIR}/setup/kraken2_db.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_qc.yml'
     shell:
         """
         # Averigua la ruta del ambiente conda activo
@@ -41,7 +41,7 @@ rule setup_prokka_database:
     log:
         f"{LOGDIR}/setup/prokka_db.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_amr_annotation.yaml'
     shell:
         """
         # Averigua la ruta del ambiente conda activo
@@ -101,7 +101,7 @@ rule setup_amrfinder_database:
     log:
         f"{LOGDIR}/setup/setup_amrfinder_db.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_amr_annotation.yaml'
     shell:
         """
         echo -e "\n\n$(printf '*%.0s' {{1..25}}) SETUP AMRFINDER DB $(printf '*%.0s' {{1..25}})\n" &>> {log}
@@ -115,7 +115,7 @@ rule setup_resfinder_database:
     log:
         f"{LOGDIR}/setup/setup_resfinder_db.log"
     conda:
-        '../envs/epibac_extra.yml'
+        '../envs/epibac_amr_annotation_extra.yml'
     shell:
         """
         # Averigua la ruta del ambiente conda activo

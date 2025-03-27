@@ -1,0 +1,28 @@
+name: epibac_qc
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Validación samples_info
+  - pyyaml
+  - pandas
+  - snakemake=9.1.1  
+  # Control de calidad de secuencias
+  - fastqc=0.12.1
+  - nanoqc=0.10.0
+  # Detección de contaminación y especie
+  - kraken2=2.14
+  - kmerfinder=3.0.2
+  # Filtrado y trimming
+  - fastp=0.24.0
+  - bbmap=39.19
+  - picard=3.3.0
+  - porechop=0.2.4
+  - filtlong=0.2.1
+  # Evaluación del ensamblado
+  - quast=5.3.0
+  - checkm-genome=1.2.3
+  - checkm2=1.1.0
+  # Reporte 
+  - multiqc=1.28

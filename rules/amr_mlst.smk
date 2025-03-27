@@ -11,7 +11,7 @@ rule epibac_amr:
     log:
         f"{LOGDIR}/amrfinder/{{sample}}.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_amr_annotation_extra.yaml'
     threads: get_resource("amrfinder","threads")
     resources:
         mem_mb = get_resource("amrfinder","mem"),
@@ -54,7 +54,7 @@ rule epibac_resfinder:
     log:
         f"{LOGDIR}/resfinder/{{sample}}.log"
     conda:
-        '../envs/epibac_extra.yml'
+        '../envs/epibac_amr_annotation_extra.yml'
     threads: get_resource("resfinder","threads")
     resources:
         mem_mb = get_resource("resfinder","mem"),
@@ -90,7 +90,7 @@ rule epibac_mlst:
     log:
         f"{LOGDIR}/mlst/{{sample}}.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_amr_annotation.yaml'
     threads: get_resource("mlst","threads")
     resources:
         mem_mb = get_resource("mlst","mem"),
