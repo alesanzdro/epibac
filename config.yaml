@@ -1,5 +1,6 @@
 samples: "test/samples_info.csv"
 
+primary_id_column: "id2" # Identificador primario de las muestras PETICION (id) o CODIGO_ORIGEN (id2)
 mode: "gva"  # Puede ser "normal" o "gva"
 
 outdir: "results"

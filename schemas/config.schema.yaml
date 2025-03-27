@@ -6,6 +6,11 @@ properties:
     type: string
     description: "Ruta al fichero de muestras"
   
+  primary_id_column:
+    type: string
+    enum: ["id", "id2"]
+    description: "Identificador que se empleará para las muestras y los resultados"
+
   mode:
     type: string
     enum: ["gva", "normal"]
@@ -73,6 +78,7 @@ properties:
 
 required:
   - samples
+  - primary_id_column
   - mode
   - outdir
   - logdir
