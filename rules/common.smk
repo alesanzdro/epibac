@@ -1,35 +1,43 @@
 import glob
+import re
+import pandas as pd
 
-##### Wildcard constraints #####
+use_column = config.get("primary_id_column", "id")
+
+def get_samples():
+    samples_csv = f"{config['outdir']}/samples_info_validated.csv"
+    if os.path.exists(samples_csv):
+        return pd.read_csv(samples_csv, sep=";", dtype=str).set_index(use_column, drop=False)
+    else:
+        raise FileNotFoundError(
+            f"El fichero validado '{samples_csv}' aún no existe. Ejecuta primero la regla 'validate_samples'.")
+
+# Wildcard genérico, no usa función todavía
 wildcard_constraints:
-    sample="|".join(samples["sample"])
+    sample="[^/]+"
 
-
-##### Helper functions #####
-
-
-def get_resource(rule,resource):
+# Resto igual
+def get_resource(rule, resource):
     try:
         return config["resources"][rule][resource]
     except KeyError:
         return config["resources"]["default"][resource]
 
+def sanitize_id(x):
+    return re.sub(r"[ .,-]", "_", str(x))
+
 def get_fastq(wildcards):
-    """Get fastq files of given sample-unit."""
-    fastqs = samples.loc[(wildcards.sample), ["fq1", "fq2"]].dropna()
-    if len(fastqs) == 2:
-        return {"r1": fastqs.fq1, "r2": fastqs.fq2}
-    return {"r1": fastqs.fq1}
+    samples = get_samples()
+    fastqs = samples.loc[wildcards.sample, ["illumina_r1", "illumina_r2"]]
+    if pd.notnull(fastqs["illumina_r1"]) and pd.notnull(fastqs["illumina_r2"]):
+        return {"r1": fastqs["illumina_r1"], "r2": fastqs["illumina_r2"]}
+    elif pd.notnull(fastqs["illumina_r1"]):
+        return {"r1": fastqs["illumina_r1"]}
+    else:
+        raise ValueError(f"No se encontraron archivos FASTQ válidos para {wildcards.sample}")
 
 def get_filtered_samples():
-    validated_samples = [f.split('/')[-1].split('.')[0] for f in glob.glob("out/validated/*.validated")]
+    validated_samples = [
+        f.split('/')[-1].split('.')[0] for f in glob.glob(f"{config['outdir']}/validated/*.validated")
+    ]
     return validated_samples
-
-    
-#FILTERED_SAMPLES = []
-#def get_filtered_samples():
-#    global FILTERED_SAMPLES
-#    if not FILTERED_SAMPLES:
-#        with open("out/qc/fastq_filter/samples_pass.csv", 'r') as file:
-#            FILTERED_SAMPLES = [line.split(';')[0] for line in file if int(line.split(';')[1].strip()) > 1000]
-#    return FILTERED_SAMPLES

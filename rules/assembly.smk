@@ -9,7 +9,7 @@ rule epibac_assembly:
     log:
         f"{LOGDIR}/unicycler/{{sample}}.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_assembly.yml'
     threads: get_resource("unicycler","threads")
     resources:
         mem_mb = get_resource("unicycler","mem"),
@@ -36,4 +36,3 @@ rule epibac_assembly:
         mv {params.output_dir}/assembly.gfa {output.gfa}
         mv {params.output_dir}/unicycler.log {output.log_file}
         """
-

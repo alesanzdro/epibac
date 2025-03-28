@@ -9,7 +9,7 @@ rule epibac_prokka:
     log:
         f"{LOGDIR}/prokka/{{sample}}.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_amr_annotation.yml'
     threads: get_resource("prokka","threads")
     resources:
         mem_mb = get_resource("prokka","mem"),

@@ -1,0 +1,87 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+type: object
+
+properties:
+  samples:
+    type: string
+    description: "Ruta al fichero de muestras"
+  
+  primary_id_column:
+    type: string
+    enum: ["id", "id2"]
+    description: "Identificador que se empleará para las muestras y los resultados"
+
+  mode:
+    type: string
+    enum: ["gva", "normal"]
+    description: "Modo de análisis"
+
+  outdir:
+    type: string
+    description: "Directorio de resultados"
+
+  logdir:
+    type: string
+    description: "Directorio de logs"
+
+  params:
+    type: object
+    properties:
+      min_reads:
+        type: integer
+      fastp:
+        type: object
+        properties:
+          extra: {type: string}
+        required: [extra]
+      unicycler:
+        type: object
+        properties:
+          extra: {type: string}
+        required: [extra]
+      resfinder:
+        type: object
+        properties:
+          extra: {type: string}
+        required: [extra]
+      kraken2:
+        type: object
+        properties:
+          db: {type: string}
+        required: []
+    required: [min_reads, fastp, unicycler, resfinder]
+
+  resources:
+    type: object
+    patternProperties:
+      "^[a-zA-Z0-9_]+$":
+        type: object
+        properties:
+          threads: {type: integer}
+          mem: {type: integer}
+          walltime: {type: integer}
+        required: [threads, mem, walltime]
+    additionalProperties: false
+
+  species:
+    type: object
+    patternProperties:
+      "^[a-z_]+$":
+        type: object
+        properties:
+          genome_size:
+            type: integer
+          refseq:
+            type: string
+        required: [genome_size, refseq]
+    additionalProperties: true
+
+required:
+  - samples
+  - primary_id_column
+  - mode
+  - outdir
+  - logdir
+  - params
+  - resources
+  - species

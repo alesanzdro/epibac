@@ -4,7 +4,7 @@ rule setup_kraken2_database:
     log:
         f"{LOGDIR}/setup/kraken2_db.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_qc.yml'
     shell:
         """
         # Averigua la ruta del ambiente conda activo
@@ -41,9 +41,9 @@ rule setup_prokka_database:
     log:
         f"{LOGDIR}/setup/prokka_db.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_amr_annotation.yml'
     shell:
-        """
+        r"""
         # Averigua la ruta del ambiente conda activo
         CONDA_PREFIX=${{CONDA_PREFIX}}
 
@@ -67,7 +67,11 @@ rule setup_prokka_database:
 
             # Concatenamos todos en un solo fichero
             #cat $CONDA_PREFIX/db/hmm/hmm_PGAP/*.HMM > $CONDA_PREFIX/db/hmm/PGAP.hmm
-            find $CONDA_PREFIX/db/hmm/hmm_PGAP -type f -name "*.HMM" -exec cat {{}} + > $CONDA_PREFIX/db/hmm/PGAP.hmm
+            find $CONDA_PREFIX/db/hmm/hmm_PGAP -type f -name "*.HMM" -exec cat {{}} + > $CONDA_PREFIX/db/hmm/PGAP.hmm.raw
+
+            # Eliminamos duplicados de PGAP.hmm.raw para crear PGAP.hmm limpio
+            awk '/^NAME/ {{ if (a[$2]++) skip=1; else skip=0 }} !skip {{ print }}' \
+                "$CONDA_PREFIX/db/hmm/PGAP.hmm.raw" > "$CONDA_PREFIX/db/hmm/PGAP.hmm"
 
             echo -e "\n\n$(printf '*%.0s' {{1..25}}) Construimos índice HMMER $(printf '*%.0s' {{1..25}})\n" &>> {log}
             
@@ -101,7 +105,7 @@ rule setup_amrfinder_database:
     log:
         f"{LOGDIR}/setup/setup_amrfinder_db.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_amr_annotation_extra.yml'
     shell:
         """
         echo -e "\n\n$(printf '*%.0s' {{1..25}}) SETUP AMRFINDER DB $(printf '*%.0s' {{1..25}})\n" &>> {log}
@@ -115,21 +119,21 @@ rule setup_resfinder_database:
     log:
         f"{LOGDIR}/setup/setup_resfinder_db.log"
     conda:
-        '../envs/epibac_extra.yml'
+        '../envs/epibac_amr_annotation_extra.yml'
     shell:
         """
         # Averigua la ruta del ambiente conda activo
         CONDA_PREFIX=${{CONDA_PREFIX}}
 
         # Clonamos DB si no existe
-        if [ ! -d "$CONDA_PREFIX/share/resfinder-4.1.11/db/resfinder_db" ]; then
+        if [ ! -d "$CONDA_PREFIX/share/resfinder-4.6.0/db/resfinder_db" ]; then
 
-            # rm -rf $CONDA_PREFIX/share/resfinder-4.1.11/db/resfinder_db
-            git clone https://git@bitbucket.org/genomicepidemiology/resfinder_db.git $CONDA_PREFIX/share/resfinder-4.1.11/db/resfinder_db
+            # rm -rf $CONDA_PREFIX/share/resfinder-4.6.0/db/resfinder_db
+            git clone https://git@bitbucket.org/genomicepidemiology/resfinder_db.git $CONDA_PREFIX/share/resfinder-4.6.0/db/resfinder_db
 
             # Modificamos variable entorno de forma permanente
             echo "export CGE_BLASTN=$CONDA_PREFIX/bin/blastn" > $CONDA_PREFIX/etc/conda/activate.d/CGE.sh
-            echo "export CGE_RESFINDER_RESGENE_DB=$CONDA_PREFIX/share/resfinder-4.1.11/db/resfinder_db" >> $CONDA_PREFIX/etc/conda/activate.d/CGE.sh
+            echo "export CGE_RESFINDER_RESGENE_DB=$CONDA_PREFIX/share/resfinder-4.6.0/db/resfinder_db" >> $CONDA_PREFIX/etc/conda/activate.d/CGE.sh
             chmod +x $CONDA_PREFIX/etc/conda/activate.d/CGE.sh
         
         fi

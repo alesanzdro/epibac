@@ -1,49 +1,60 @@
 import pandas as pd
 import os
-from snakemake.utils import validate
-from snakemake.utils import min_version
+from snakemake.utils import validate, min_version
 from datetime import datetime
 
-min_version("7.32")
+DATE = datetime.now().strftime("%y%m%d")
 
-##singularity: "docker://continuumio/miniconda3:4.6.14"
+min_version("9.1.1")
 
-##report: "report/workflow.rst"
-
-###### Config file and sample sheets #####
 configfile: "config.yaml"
-#validate(config, schema="schemas/config.schema.yaml")
-
-# snakemake --use-conda -j 20 --dry-run --dag | dot -Tpng > dag.png
+validate(config, schema="schemas/config.schema.yaml")
 
 OUTDIR = config["outdir"]
 LOGDIR = config["logdir"]
 
-#samples = pd.read_csv(config["samples"],sep="\t").set_index("sample", drop=False)
-#validate(samples, schema="schemas/samples.schema.yaml")
+rule validate_samples:
+    input:
+        samples=config["samples"],
+        schema="schemas/samples.schema.yaml",
+        config="config.yaml"
+    output:
+        warnings=f"{LOGDIR}/validation_warnings.txt",
+        corrected_samples=f"{OUTDIR}/samples_info_validated.csv"
+    conda:
+        'envs/epibac.yml'
+    shell:
+        """
+        python scripts/validate_samples_info.py \
+            {input.samples} \
+            {input.schema} \
+            {input.config} \
+            {output.warnings} \
+            {output.corrected_samples}
+        """
 
-samples = pd.read_csv(config["samples"], sep="\t", dtype=str).set_index("sample", drop=False)
-samples.index = samples.index.astype(str)
-
-# Code for when we have a column named UNIT, for when we need to merge samples (from big samplesheet file)
-#samples = pd.read_csv(config["samples"],sep="\t", dtype=str).set_index(["sample", "unit"], drop=False)
-#samples.index = samples.index.set_levels([i.astype(str) for i in samples.index.levels])  # enforce str in index
-#validate(units, schema="schemas/units.schema.yaml")
-
+# Función para obtener las muestras validadas, evaluada solo después de ejecutar validate_samples
+def get_samples():
+    samples_csv = f"{OUTDIR}/samples_info_validated.csv"
+    if os.path.exists(samples_csv):
+        return pd.read_csv(samples_csv, sep=";", dtype=str).set_index(config.get("primary_id_column", "id"), drop=False)
+    else:
+        raise FileNotFoundError("El fichero validado aún no existe. Ejecuta validate_samples primero.")
 
 include: "rules/common.smk"
-##### Modules #####include: "rules/setup.smk"
-
-##### Target rules #####
-rule all:
-    input:
-        f"{OUTDIR}/qc/multiqc.html",
-        f"{OUTDIR}/report/{datetime.now().strftime('%y%m%d')}_EPIBAC.tsv"
-   
-
 include: "rules/setup.smk"
 include: "rules/qc.smk"
 include: "rules/assembly.smk"
 include: "rules/annotation.smk"
 include: "rules/amr_mlst.smk"
 include: "rules/report.smk"
+
+rule all:
+    input:
+        rules.validate_samples.output,
+        f"{OUTDIR}/qc/multiqc.html",
+        # Reporte resumen final (TSV y XLSX con fecha)
+        f"{OUTDIR}/report/{DATE}_EPIBAC.tsv",
+        f"{OUTDIR}/report/{DATE}_EPIBAC.xlsx",
+        f"{OUTDIR}/report/{DATE}_EPIBAC_GESTLAB.csv"
+
