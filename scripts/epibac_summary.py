@@ -81,9 +81,9 @@ class Procesado:
                             if not table.empty:
                                 
                                 # Filtra las filas por 'Element type' y agrupa por 'Gene symbol'
-                                sVIR = " ".join(table[table['Element type'] == 'VIRULENCE']['Gene symbol'].astype(str).unique())
-                                sAMR = " ".join(table[table['Element type'] == 'AMR']['Gene symbol'].astype(str).unique())
-                                vSCOPE = " ".join(table[table['Scope'] == 'core']['Gene symbol'].astype(str).unique())
+                                sVIR = " ".join(table[table['Type'] == 'VIRULENCE']['Element symbol'].astype(str).unique())
+                                sAMR = " ".join(table[table['Type'] == 'AMR']['Element symbol'].astype(str).unique())
+                                vSCOPE = " ".join(table[table['Scope'] == 'core']['Element symbol'].astype(str).unique())
                                 
                                 # Crea un nuevo DataFrame con una fila y las columnas especificadas
                                 new_df = pd.DataFrame({'Sample': [sNAME], 'AMR': [sAMR], 'VIRULENCE': [sVIR], 'SCOPE_core': [vSCOPE]})

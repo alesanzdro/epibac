@@ -264,8 +264,19 @@ def main():
     "MODELO_DORADO": "dorado_model"
     }
 
-    # Luego del validate(df, schema_yaml), aplicamos el renombrado:
-    df.rename(columns=rename_map_gva, inplace=True)
+
+    # Luego de validar y antes de renombrar columnas
+    if config.get("mode") == "gva":
+        # Elimina columnas 'id' e 'id2' si existen y están completamente vacías
+        for col in ["id", "id2"]:
+            if col in df.columns and df[col].str.strip().eq("").all():
+                df.drop(columns=col, inplace=True)
+
+        # Renombra desde PETICION y CODIGO_ORIGEN
+        df.rename(columns=rename_map_gva, inplace=True)
+    else:
+        # En modo normal, no se renombran PETICION y CODIGO_ORIGEN, solo se validan
+        pass
    
     df.to_csv(samples_info_validated, sep=';', index=False)
 

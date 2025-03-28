@@ -1,8 +1,9 @@
 import pandas as pd
 import os
-from snakemake.utils import validate
-from snakemake.utils import min_version
+from snakemake.utils import validate, min_version
 from datetime import datetime
+
+DATE = datetime.now().strftime("%y%m%d")
 
 min_version("9.1.1")
 
@@ -13,9 +14,6 @@ OUTDIR = config["outdir"]
 LOGDIR = config["logdir"]
 
 rule validate_samples:
-    """
-    Valida y corrige samples_info.csv generando un archivo corregido y warnings
-    """
     input:
         samples=config["samples"],
         schema="schemas/samples.schema.yaml",
@@ -27,7 +25,7 @@ rule validate_samples:
         'envs/epibac.yml'
     shell:
         """
-        python scripts/validate_samples.py \
+        python scripts/validate_samples_info.py \
             {input.samples} \
             {input.schema} \
             {input.config} \
@@ -35,12 +33,13 @@ rule validate_samples:
             {output.corrected_samples}
         """
 
-# Cargar directamente el archivo validado
-validated_samples = pd.read_csv(f"{OUTDIR}/samples_info_validated.csv", sep=";", dtype=str).set_index("PETICION", drop=False)
-
-#samples = pd.read_csv(config["samples"], sep="\t", dtype=str).set_index("sample", drop=False)
-#samples.index = samples.index.astype(str)
-
+# Función para obtener las muestras validadas, evaluada solo después de ejecutar validate_samples
+def get_samples():
+    samples_csv = f"{OUTDIR}/samples_info_validated.csv"
+    if os.path.exists(samples_csv):
+        return pd.read_csv(samples_csv, sep=";", dtype=str).set_index(config.get("primary_id_column", "id"), drop=False)
+    else:
+        raise FileNotFoundError("El fichero validado aún no existe. Ejecuta validate_samples primero.")
 
 include: "rules/common.smk"
 include: "rules/setup.smk"
@@ -52,7 +51,10 @@ include: "rules/report.smk"
 
 rule all:
     input:
-        f"{LOGDIR}/validation_warnings.txt",
-        f"{OUTDIR}/samples_info_validated.csv",
+        rules.validate_samples.output,
         f"{OUTDIR}/qc/multiqc.html",
-        f"{OUTDIR}/report/{datetime.now().strftime('%y%m%d')}_EPIBAC.tsv"
+        # Reporte resumen final (TSV y XLSX con fecha)
+        f"{OUTDIR}/report/{DATE}_EPIBAC.tsv",
+        f"{OUTDIR}/report/{DATE}_EPIBAC.xlsx",
+        f"{OUTDIR}/report/{DATE}_EPIBAC_GESTLAB.csv"
+

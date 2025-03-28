@@ -1,44 +1,43 @@
 import glob
 import re
+import pandas as pd
 
-# Columna utilizada como identificador principal ("id" o "id2")
-use_column = config.get("primary_id_column", "id")  # valor por defecto "id"
+use_column = config.get("primary_id_column", "id")
 
-# Cargar muestras validadas desde archivo validado
-samples = pd.read_csv(f"{OUTDIR}/samples_info_validated.csv", sep=";", dtype=str).set_index(primary_id_column, drop=False)
+def get_samples():
+    samples_csv = f"{config['outdir']}/samples_info_validated.csv"
+    if os.path.exists(samples_csv):
+        return pd.read_csv(samples_csv, sep=";", dtype=str).set_index(use_column, drop=False)
+    else:
+        raise FileNotFoundError(
+            f"El fichero validado '{samples_csv}' aún no existe. Ejecuta primero la regla 'validate_samples'.")
 
-##### Wildcard constraints #####
+# Wildcard genérico, no usa función todavía
 wildcard_constraints:
-    sample="|".join(samples.index)
+    sample="[^/]+"
 
-##### Helper functions #####
-
+# Resto igual
 def get_resource(rule, resource):
     try:
         return config["resources"][rule][resource]
     except KeyError:
         return config["resources"]["default"][resource]
 
-
 def sanitize_id(x):
-    """
-    Reemplaza espacios, puntos, comas o guiones por subguiones.
-    Así 'PC185-DE0028' -> 'PC185_DE0028', 'PF019 3FAH1' -> 'PF019_3FAH1', etc.
-    """
     return re.sub(r"[ .,-]", "_", str(x))
 
-
 def get_fastq(wildcards):
-    """Obtener archivos fastq para una muestra dada."""
-    fastqs = samples.loc[wildcards.sample, ["illumina_r1", "illumina_r2"]].dropna()
+    samples = get_samples()
+    fastqs = samples.loc[wildcards.sample, ["illumina_r1", "illumina_r2"]]
     if pd.notnull(fastqs["illumina_r1"]) and pd.notnull(fastqs["illumina_r2"]):
-        return {"r1": fastqs.illumina_r1, "r2": fastqs.illumina_r2}
+        return {"r1": fastqs["illumina_r1"], "r2": fastqs["illumina_r2"]}
     elif pd.notnull(fastqs["illumina_r1"]):
-        return {"r1": fastqs.illumina_r1}
+        return {"r1": fastqs["illumina_r1"]}
     else:
         raise ValueError(f"No se encontraron archivos FASTQ válidos para {wildcards.sample}")
 
-
 def get_filtered_samples():
-    validated_samples = [f.split('/')[-1].split('.')[0] for f in glob.glob(f"{OUTDIR}/validated/*.validated")]
+    validated_samples = [
+        f.split('/')[-1].split('.')[0] for f in glob.glob(f"{config['outdir']}/validated/*.validated")
+    ]
     return validated_samples
