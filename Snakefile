@@ -33,14 +33,6 @@ rule validate_samples:
             {output.corrected_samples}
         """
 
-# Función para obtener las muestras validadas, evaluada solo después de ejecutar validate_samples
-def get_samples():
-    samples_csv = f"{OUTDIR}/samples_info_validated.csv"
-    if os.path.exists(samples_csv):
-        return pd.read_csv(samples_csv, sep=";", dtype=str).set_index(config.get("primary_id_column", "id"), drop=False)
-    else:
-        raise FileNotFoundError("El fichero validado aún no existe. Ejecuta validate_samples primero.")
-
 include: "rules/common.smk"
 include: "rules/setup.smk"
 include: "rules/qc.smk"
@@ -49,12 +41,18 @@ include: "rules/annotation.smk"
 include: "rules/amr_mlst.smk"
 include: "rules/report.smk"
 
-rule all:
-    input:
-        rules.validate_samples.output,
-        f"{OUTDIR}/qc/multiqc.html",
-        # Reporte resumen final (TSV y XLSX con fecha)
-        f"{OUTDIR}/report/{DATE}_EPIBAC.tsv",
-        f"{OUTDIR}/report/{DATE}_EPIBAC.xlsx",
-        f"{OUTDIR}/report/{DATE}_EPIBAC_GESTLAB.csv"
+# Construimos la lista de inputs esperados para la regla all
+inputs_all = [
+    rules.validate_samples.output,
+    f"{OUTDIR}/qc/multiqc.html",
+    f"{OUTDIR}/report/{DATE}_EPIBAC.tsv",
+    f"{OUTDIR}/report/{DATE}_EPIBAC.xlsx",
+]
 
+# Si estamos en modo GVA, añadimos también el reporte para GESTLAB
+if config.get("mode") == "gva":
+    inputs_all.append(f"{OUTDIR}/report/{DATE}_EPIBAC_GESTLAB.csv")
+
+# Definimos la regla all con esa lista dinámica
+rule all:
+    input: inputs_all

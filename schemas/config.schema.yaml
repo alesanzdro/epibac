@@ -24,6 +24,11 @@ properties:
     type: string
     description: "Directorio de logs"
 
+  kraken2_db_url:
+    type: string
+    format: uri
+    description: "URL de descarga de la base de datos Kraken2"
+
   params:
     type: object
     properties:
