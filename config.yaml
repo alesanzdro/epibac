@@ -6,6 +6,8 @@ mode: "gva"  # Puede ser "normal" o "gva"
 outdir: "results"
 logdir: "logs"
 
+kraken2_db_url: "https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16gb_20241228.tar.gz"
+
 params:
     min_reads: 1000
     fastp:

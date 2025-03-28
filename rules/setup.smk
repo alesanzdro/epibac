@@ -1,34 +1,33 @@
 rule setup_kraken2_database:
     output:
-        f"{LOGDIR}/setup/setup_kraken2_db.flag"
+        flag = f"{KRAKEN_DB_DIR}/.installed.flag"
     log:
-        f"{LOGDIR}/setup/kraken2_db.log"
+        KRAKEN_DB_LOG
     conda:
         '../envs/epibac_qc.yml'
+    params:
+        db_url=KRAKEN_DB_URL,
+        db_name=KRAKEN_DB_NAME,
+        db_dir=KRAKEN_DB_DIR
     shell:
         """
-        # Averigua la ruta del ambiente conda activo
-        CONDA_PREFIX=${{CONDA_PREFIX}}
+        mkdir -p {params.db_dir}
+        mkdir -p resources/databases/log
 
-        # Comprobar si se ha descomprimido la base de datos
-        if [ ! -f "$CONDA_PREFIX/db/kraken2_minusb/taxo.k2d" ]; then
+        if [ ! -f "{params.db_dir}/taxo.k2d" ]; then
+            echo "[INFO] Descargando base de datos Kraken2 desde {params.db_url}" &>> {log}
+            wget -O {params.db_dir}/{params.db_name}.tar.gz {params.db_url} &>> {log}
 
-            # Crear el directorio si no existe
-            mkdir -p $CONDA_PREFIX/db/kraken2_minusb/
+            echo "[INFO] Descomprimiendo base de datos..." &>> {log}
+            tar -xvzf {params.db_dir}/{params.db_name}.tar.gz -C {params.db_dir} &>> {log}
 
-            # Descarga la base de datos
-            wget -O $CONDA_PREFIX/db/kraken2_minusb/k2_minusb_20230605.tar.gz https://genome-idx.s3.amazonaws.com/kraken/k2_minusb_20230605.tar.gz &>> {log}
-            # https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_20230605.tar.gz
-            # Descomprime la base de datos
-            tar -xvzf $CONDA_PREFIX/db/kraken2_minusb/k2_minusb_20230605.tar.gz -C $CONDA_PREFIX/db/kraken2_minusb/ &>> {log}
-            
-            # Eliminamos fichero que ya no necesitamos
-            rm $CONDA_PREFIX/db/kraken2_minusb/k2_minusb_20230605.tar.gz*
-
+            echo "[INFO] Eliminando archivo .tar.gz..." &>> {log}
+            rm -f {params.db_dir}/{params.db_name}.tar.gz
+        else
+            echo "[INFO] La base de datos ya está instalada, se omite la descarga." &>> {log}
         fi
 
-        # Crear un flag para indicar que la configuración está completa
-        touch {output}
+        touch {output.flag}
         """
 
 rule setup_prokka_database:

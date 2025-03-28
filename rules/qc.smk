@@ -114,39 +114,48 @@ rule epibac_fastqc_trim:
 
 rule epibac_kraken2:
     input:
-        setup_db = f"{LOGDIR}/setup/setup_kraken2_db.flag",
+        setup_db = KRAKEN_DB_FLAG,
         r1 = rules.epibac_fastp_pe.output.r1,
         r2 = rules.epibac_fastp_pe.output.r2
     output:
-        f"{OUTDIR}/qc/kraken2/{{sample}}_CR_1.fastq",
-        f"{OUTDIR}/qc/kraken2/{{sample}}_CR_2.fastq",
-        report = f"{OUTDIR}/qc/kraken2/{{sample}}.txt"
+        "{}/qc/kraken2/{{sample}}_CR_1.fastq".format(OUTDIR),
+        "{}/qc/kraken2/{{sample}}_CR_2.fastq".format(OUTDIR),
+        report = "{}/qc/kraken2/{{sample}}.txt".format(OUTDIR)
     params:
-        classified_out = f"{OUTDIR}/qc/kraken2/{{sample}}_CR#.fastq",
-        unclassified_out = f"{OUTDIR}/qc/kraken2/{{sample}}_unclassified#.fastq"
+        report_dir = directory("{}/qc/kraken2".format(OUTDIR)),
+        classified_out = "{}/qc/kraken2/{{sample}}_CR#.fastq".format(OUTDIR),
+        db_path = KRAKEN_DB_DIR
     log:
         f"{LOGDIR}/kraken2/{{sample}}.log"
     conda:
-        '../envs/epibac_qc.yml'
+        '../envs/epibac.yml'
     threads: get_resource("kraken2", "threads")
     resources:
         mem_mb = get_resource("kraken2", "mem"),
         walltime = get_resource("kraken2", "walltime")
     shell:
+        """
+        kraken2 \
+            --threads {threads} \
+            --db {params.db_path} \
+            --gzip-compressed \
+            --paired {input.r1} {input.r2} \
+            --output {output.report} \
+            --classified-out "{params.classified_out}" \
+            --use-names \
+            &> {log}
+        """
         r"""
-        # Averigua la ruta del ambiente conda activo
         CONDA_PREFIX=${{CONDA_PREFIX}}
 
         kraken2 \
             --threads {threads} \
-            --db $CONDA_PREFIX/db/kraken2_minusb \
+            --db {params.db_path} \
             --gzip-compressed \
             --paired {input.r1} {input.r2} \
-            --report {output.report} \
+            --output {output.report} \
             --classified-out {params.classified_out} \
-            --unclassified-out {params.unclassified_out} \
-            --use-names \
-            &> {log}
+            --use-names &>> {log}
         """
         
 rule epibac_quast:
@@ -179,14 +188,27 @@ rule epibac_quast:
               -o {output} \
               &>> {log}
         """
-        
+
 rule multiqc:
     input:
-        lambda wc: expand(f"{OUTDIR}/qc/fastqc_raw/{{sample}}_r{{read}}_fastqc.zip", sample=get_samples().index, read=["1","2"]),
-        lambda wc: expand(f"{OUTDIR}/qc/fastqc_trim/{{sample}}_r{{read}}_fastqc.zip", sample=get_samples().index, read=["1","2"]),
-        lambda wc: expand(f"{OUTDIR}/qc/kraken2/{{sample}}.txt", sample=get_samples().index),
-        lambda wc: expand(f"{OUTDIR}/qc/quast/{{sample}}", sample=get_samples().index),
-        lambda wc: expand(f"{OUTDIR}/annotation/{{sample}}", sample=get_samples().index)
+        validated = f"{OUTDIR}/samples_info_validated.csv",
+        fastqc_raw = lambda wc: [
+            f"{OUTDIR}/qc/fastqc_raw/{sample}_r{read}_fastqc.zip"
+            for sample in get_samples().index for read in ["1", "2"]
+        ],
+        fastqc_trim = lambda wc: [
+            f"{OUTDIR}/qc/fastqc_trim/{sample}_r{read}_fastqc.zip"
+            for sample in get_samples().index for read in ["1", "2"]
+        ],
+        kraken = lambda wc: [
+            f"{OUTDIR}/qc/kraken2/{sample}.txt" for sample in get_samples().index
+        ],
+        quast = lambda wc: [
+            f"{OUTDIR}/qc/quast/{sample}" for sample in get_samples().index
+        ],
+        annot = lambda wc: [
+            f"{OUTDIR}/annotation/{sample}" for sample in get_samples().index
+        ]
     output:
         f"{OUTDIR}/qc/multiqc.html"
     log:
