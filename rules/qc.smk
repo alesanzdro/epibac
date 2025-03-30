@@ -128,7 +128,7 @@ rule epibac_kraken2:
     log:
         f"{LOGDIR}/kraken2/{{sample}}.log"
     conda:
-        '../envs/epibac.yml'
+        '../envs/epibac_qc.yml'
     threads: get_resource("kraken2", "threads")
     resources:
         mem_mb = get_resource("kraken2", "mem"),
