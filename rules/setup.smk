@@ -102,10 +102,10 @@ rule setup_prokka_database:
         touch {output.flag}
         """
 
-
 rule setup_amrfinder_database:
     output:
-        flag = AMRFINDER_DB_FLAG
+        flag = AMRFINDER_DB_FLAG,
+        version = AMRFINDER_DB_DIR + "/VERSION.txt"
     log:
         AMRFINDER_DB_LOG
     conda:
@@ -115,13 +115,25 @@ rule setup_amrfinder_database:
         db_dir = AMRFINDER_DB_DIR
     shell:
         r"""
-        echo "[INFO] ACTUALIZANDO BASE DE DATOS AMRFinder EN {params.db_dir}" &>> {log}
+        echo "[INFO] Descargando base de datos AMRFinder en {params.db_dir}" &>> {log}
         mkdir -p {params.db_dir}
 
         amrfinder_update --force_update --database {params.db_dir} &>> {log}
 
+        # Detectar la versión descargada (directorio más reciente)
+        VERSION=$(ls -1 {params.db_dir} | grep -E '^[0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}}\..*' | sort -r | head -n 1)
+
+        # Crear enlace simbólico "latest" -> versión
+        ln -sfn "$VERSION" {params.db_dir}/latest
+
+        # Guardar metadata mínima
+        echo "Fecha de instalación: $(date --iso-8601=seconds)" > {output.version}
+        echo "Versión: $VERSION" >> {output.version}
+        echo "Ruta real: {params.db_dir}/$VERSION" >> {output.version}
+
         touch {output.flag}
         """
+
 
 rule setup_resfinder_database:
     output:

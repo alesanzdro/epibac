@@ -17,7 +17,8 @@ rule epibac_prokka:
         mem_mb = get_resource("prokka","mem"),
         walltime = get_resource("prokka","walltime")
     params:
-        prefix=lambda wc: f"{wc.sample}" 
+        prefix = lambda wc: f"{wc.sample}",
+        db_dir = PROKKA_DB_DIR
     shell:
         """
         # Verifica si el archivo FASTA es vacío o no
@@ -29,17 +30,14 @@ rule epibac_prokka:
             exit 0
         fi
 
-        # Averigua la ruta del ambiente conda activo
-        CONDA_PREFIX=${{CONDA_PREFIX}}
-
         prokka \
         --cpus {threads} \
         {input.fasta} \
         --prefix {params.prefix} \
         --strain {params.prefix} \
         --locustag {params.prefix} \
-        --hmms $CONDA_PREFIX/db/hmm/PGAP.hmm \
-        --force \
+        --hmms {params.db_dir}/PGAP.hmm \
         --outdir {output.dir} \
+        --force \
         &> {log}
         """

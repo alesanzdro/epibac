@@ -32,10 +32,6 @@ properties:
     type: string
     format: uri
     description: "URL de descarga de la base de datos Kraken2"
-
-  amrfinder_db_name:
-    type: string
-    description: "Amrfinder version"
     
   params:
     type: object

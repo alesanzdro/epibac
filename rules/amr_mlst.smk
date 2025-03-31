@@ -9,20 +9,19 @@ rule epibac_amr:
         tsv = f"{OUTDIR}/amr_mlst/{{sample}}_amrfinder.tsv"
     log:
         f"{LOGDIR}/amrfinder/{{sample}}.log"
-    conda:
-        '../envs/epibac_amr_annotation_plus.yml'
-    container:
-        "docker://alesanzdro/epibac_amr_annotation_plus:1.0"
     threads: get_resource("amrfinder", "threads")
     resources:
         mem_mb = get_resource("amrfinder", "mem"),
         walltime = get_resource("amrfinder", "walltime")
     params:
         name = lambda wc: f"{wc.sample}",
-        db_dir = AMRFINDER_DB_DIR
+        db_dir = f"{AMRFINDER_DB_DIR}/latest" 
+    conda:
+        '../envs/epibac_amr_annotation_plus.yml'
+    container:
+        "docker://alesanzdro/epibac_amr_annotation_plus:1.0"
     shell:
         r"""
-        # Verifica si el archivo FASTA es vacío o no
         if [ ! -s {input.fasta} ]; then
             echo "[ERROR] El archivo FASTA {input.fasta} está vacío" &> {log}
             touch {output.gff}
@@ -34,11 +33,12 @@ rule epibac_amr:
         perl -pe '/^##FASTA/ && exit; s/(\W)Name=/$1OldName=/i; s/ID=([^;]+)/ID=$1;Name=$1/' \
           {input.gff} > {output.gff}
 
-        # Ejecuta AMRFinder con variable de entorno
-        AMRFINDER_DB={params.db_dir} amrfinder \
+        # Ejecuta AMRFinder con ruta explícita de base de datos
+        amrfinder \
           --plus \
           --threads {threads} \
           --name {params.name} \
+          --database {params.db_dir} \
           -n {input.fasta} \
           -p {input.prokka} \
           -g {output.gff} \

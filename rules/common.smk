@@ -13,13 +13,12 @@ KRAKEN_DB_FLAG = f"{KRAKEN_DB_DIR}/.installed.flag"
 KRAKEN_DB_LOG = f"{REF_DATA}/databases/log/{KRAKEN_DB_NAME}.log"
 
 # ---------- AMRFINDER ----------
-AMRFINDER_DB_NAME = config.get("amrfinder_db_name", "latest")
-AMRFINDER_DB_DIR = f"{REF_DATA}/databases/amrfinder/{AMRFINDER_DB_NAME}"
+AMRFINDER_DB_DIR = f"{REF_DATA}/databases/amrfinder"
 AMRFINDER_DB_FLAG = f"{AMRFINDER_DB_DIR}/.installed.flag"
-AMRFINDER_DB_LOG = f"{REF_DATA}/databases/log/amrfinder_{AMRFINDER_DB_NAME}.log"
+AMRFINDER_DB_LOG = f"{REF_DATA}/databases/log/amrfinder.log"
 
 # ---------- RESFINDER ----------
-RESFINDER_DB_DIR = f"{REF_DATA}/databases/resfinder/resfinder_db"
+RESFINDER_DB_DIR = f"{REF_DATA}/databases/resfinder"
 RESFINDER_DB_FLAG = f"{REF_DATA}/databases/resfinder/.installed.flag"
 RESFINDER_DB_LOG = f"{REF_DATA}/databases/log/resfinder.log"
 
