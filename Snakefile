@@ -46,6 +46,7 @@ include: "rules/report.smk"
 # Construimos la lista de inputs esperados para la regla all
 inputs_all = [
     rules.validate_samples.output,
+    #rules.metadata_prokka_database.output.version,
     f"{OUTDIR}/qc/multiqc.html",
     f"{OUTDIR}/report/{DATE}_EPIBAC.tsv",
     f"{OUTDIR}/report/{DATE}_EPIBAC.xlsx",

@@ -95,6 +95,8 @@ rule epibac_mlst:
         f"{LOGDIR}/mlst/{{sample}}.log"
     conda:
         '../envs/epibac_amr_annotation.yml'
+    container:
+        "docker://alesanzdro/epibac_amr_annotation:1.0"
     threads: get_resource("mlst","threads")
     resources:
         mem_mb = get_resource("mlst","mem"),
