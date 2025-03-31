@@ -10,6 +10,8 @@ rule epibac_assembly:
         f"{LOGDIR}/unicycler/{{sample}}.log"
     conda:
         '../envs/epibac_assembly.yml'
+    container: 
+        "docker://alesanzdro/epibac_assembly:1.0"
     threads: get_resource("unicycler","threads")
     resources:
         mem_mb = get_resource("unicycler","mem"),

@@ -22,7 +22,9 @@ rule validate_samples:
         warnings=f"{LOGDIR}/validation_warnings.txt",
         corrected_samples=f"{OUTDIR}/samples_info_validated.csv"
     conda:
-        'envs/epibac.yml'
+        'envs/epibac_qc.yml'
+    container: 
+        "docker://alesanzdro/epibac_qc:1.0"
     shell:
         """
         python scripts/validate_samples_info.py \

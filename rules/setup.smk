@@ -1,10 +1,12 @@
 rule setup_kraken2_database:
     output:
-        flag = f"{KRAKEN_DB_DIR}/.installed.flag"
+        flag = KRAKEN_DB_FLAG
     log:
         KRAKEN_DB_LOG
     conda:
         '../envs/epibac_qc.yml'
+    container: 
+        "docker://alesanzdro/epibac_qc:1.0"
     params:
         db_url=KRAKEN_DB_URL,
         db_name=KRAKEN_DB_NAME,
@@ -12,11 +14,11 @@ rule setup_kraken2_database:
     shell:
         """
         mkdir -p {params.db_dir}
-        mkdir -p resources/databases/log
+        mkdir -p $(dirname {log})
 
         if [ ! -f "{params.db_dir}/taxo.k2d" ]; then
             echo "[INFO] Descargando base de datos Kraken2 desde {params.db_url}" &>> {log}
-            wget -O {params.db_dir}/{params.db_name}.tar.gz {params.db_url} &>> {log}
+            wget --no-check-certificate -O {params.db_dir}/{params.db_name}.tar.gz {params.db_url} &>> {log}
 
             echo "[INFO] Descomprimiendo base de datos..." &>> {log}
             tar -xvzf {params.db_dir}/{params.db_name}.tar.gz -C {params.db_dir} &>> {log}
@@ -32,110 +34,88 @@ rule setup_kraken2_database:
 
 rule setup_prokka_database:
     """
-    The up-to-date versions of all TIGRFAM models are available for download by FTP as a component of the current release of PGAP HMMs. 
+    Descarga y configura la base de datos TIGRFAM (PGAP) para su uso con Prokka.
     """
     output:
-        flag = f"{LOGDIR}/setup/setup_prokka_db.flag"
-        #hmm_files = expand("{CONDA_PREFIX}/db/hmm/PGAP.hmm{ext}", CONDA_PREFIX="${CONDA_PREFIX}", ext=["", ".h3f", ".h3i", ".h3m", ".h3p"])
+        flag = PROKKA_DB_FLAG
     log:
-        f"{LOGDIR}/setup/prokka_db.log"
+        PROKKA_DB_LOG
     conda:
         '../envs/epibac_amr_annotation.yml'
+    container:
+        "docker://alesanzdro/epibac_amr_annotation:1.0"
+    params:
+        db_dir = PROKKA_DB_DIR
     shell:
         r"""
-        # Averigua la ruta del ambiente conda activo
-        CONDA_PREFIX=${{CONDA_PREFIX}}
+        mkdir -p {params.db_dir}
+        mkdir -p $(dirname {log})
 
-        # Comprobar si el setup ya se hizo previamente
-        if [ ! -f "$CONDA_PREFIX/db/hmm/PGAP.hmm.h3i" ]; then
+        if [ ! -f "{params.db_dir}/PGAP.hmm.h3i" ]; then
+            echo "[INFO] Descargando base de datos TIGRFAM PGAP" &>> {log}
+            wget --no-check-certificate -O {params.db_dir}/hmm_PGAP.HMM.tgz https://ftp.ncbi.nlm.nih.gov/hmm/current/hmm_PGAP.HMM.tgz &>> {log}
 
-            # Modificamos variable entorno de forma permanente
-            echo "export PATH=$CONDA_PREFIX/bin:\$PATH" > $CONDA_PREFIX/etc/conda/activate.d/export_perl.sh
-            chmod +x $CONDA_PREFIX/etc/conda/activate.d/export_perl.sh
-            export PATH=$CONDA_PREFIX/bin:$PATH
+            tar -xvzf {params.db_dir}/hmm_PGAP.HMM.tgz -C {params.db_dir} &>> {log}
 
-            # Crear el directorio si no existe
-            mkdir -p $CONDA_PREFIX/db/hmm/
+            find {params.db_dir}/hmm_PGAP -type f -name "*.HMM" -exec cat {{}} + > {params.db_dir}/PGAP.hmm.raw
 
-            # Descarga la base de datos
-            echo -e "\n\n$(printf '*%.0s' {{1..25}}) Descargamos base de datos $(printf '*%.0s' {{1..25}})\n" &>> {log}
-            wget -O $CONDA_PREFIX/db/hmm/hmm_PGAP.HMM.tgz https://ftp.ncbi.nlm.nih.gov/hmm/current/hmm_PGAP.HMM.tgz &>> {log}
-
-            # Descomprime la base de datos
-            tar -xvzf $CONDA_PREFIX/db/hmm/hmm_PGAP.HMM.tgz -C $CONDA_PREFIX/db/hmm/ &>> {log}
-
-            # Concatenamos todos en un solo fichero
-            #cat $CONDA_PREFIX/db/hmm/hmm_PGAP/*.HMM > $CONDA_PREFIX/db/hmm/PGAP.hmm
-            find $CONDA_PREFIX/db/hmm/hmm_PGAP -type f -name "*.HMM" -exec cat {{}} + > $CONDA_PREFIX/db/hmm/PGAP.hmm.raw
-
-            # Eliminamos duplicados de PGAP.hmm.raw para crear PGAP.hmm limpio
             awk '/^NAME/ {{ if (a[$2]++) skip=1; else skip=0 }} !skip {{ print }}' \
-                "$CONDA_PREFIX/db/hmm/PGAP.hmm.raw" > "$CONDA_PREFIX/db/hmm/PGAP.hmm"
+                "{params.db_dir}/PGAP.hmm.raw" > "{params.db_dir}/PGAP.hmm"
 
-            echo -e "\n\n$(printf '*%.0s' {{1..25}}) Construimos índice HMMER $(printf '*%.0s' {{1..25}})\n" &>> {log}
-            
-            hmmpress $CONDA_PREFIX/db/hmm/PGAP.hmm &>> {log}
-            
-            # Asegura que Prokka pueda encontrar la base de datos
-            echo -e "\n\n$(printf '*%.0s' {{1..25}}) SETUP PROKKA DB $(printf '*%.0s' {{1..25}})\n" &>> {log}
+            hmmpress {params.db_dir}/PGAP.hmm &>> {log}
+
+            echo "[INFO] setupdb con PROKKA" &>> {log}
             prokka --setupdb &>> {log}
 
-            # Verifica que los archivos fueron creados correctamente antes de crear el flag
-            for ext in "" .h3f .h3i .h3m .h3p; do
-                if [[ ! -f $CONDA_PREFIX/db/hmm/PGAP.hmm$ext ]]; then
-                    echo "Error: El archivo PGAP.hmm$ext no fue creado." &>> {log}
-                    exit 1
-                fi
-            done
-
-            # Eliminamos fichero que ya no necesitamos
-            rm $CONDA_PREFIX/db/hmm/hmm_PGAP.HMM.tgz*
-
+            rm -f {params.db_dir}/hmm_PGAP.HMM.tgz*
+        else
+            echo "[INFO] Base de datos ya existe. Se omite descarga." &>> {log}
         fi
 
-        # Crear un flag para indicar que la configuración está completa
         touch {output.flag}
         """
 
-
 rule setup_amrfinder_database:
     output:
-        f"{LOGDIR}/setup/setup_amrfinder_db.flag"
+        flag = AMRFINDER_DB_FLAG
     log:
-        f"{LOGDIR}/setup/setup_amrfinder_db.log"
+        AMRFINDER_DB_LOG
     conda:
-        '../envs/epibac_amr_annotation_extra.yml'
+        '../envs/epibac_amr_annotation_plus.yml'
+    container: "docker://alesanzdro/epibac_amr_annotation_plus:1.0"
+    params:
+        db_dir = AMRFINDER_DB_DIR
     shell:
-        """
-        echo -e "\n\n$(printf '*%.0s' {{1..25}}) SETUP AMRFINDER DB $(printf '*%.0s' {{1..25}})\n" &>> {log}
-        amrfinder -u &>> {log}
-        touch {output}
+        r"""
+        echo "[INFO] ACTUALIZANDO BASE DE DATOS AMRFinder EN {params.db_dir}" &>> {log}
+        mkdir -p {params.db_dir}
+
+        # Usamos la variable de entorno para controlar el path de instalación
+        AMRFINDER_DB={params.db_dir} amrfinder -u &>> {log}
+
+        touch {output.flag}
         """
 
 rule setup_resfinder_database:
     output:
-        f"{LOGDIR}/setup/setup_resfinder_db.flag"
+        flag = RESFINDER_DB_FLAG
     log:
-        f"{LOGDIR}/setup/setup_resfinder_db.log"
+        RESFINDER_DB_LOG
     conda:
-        '../envs/epibac_amr_annotation_extra.yml'
+        '../envs/epibac_amr_annotation_plus.yml'
+    container: "docker://alesanzdro/epibac_amr_annotation_plus:1.0"
+    params:
+        db_dir = RESFINDER_DB_DIR
     shell:
         """
-        # Averigua la ruta del ambiente conda activo
-        CONDA_PREFIX=${{CONDA_PREFIX}}
+        mkdir -p {params.db_dir}
 
-        # Clonamos DB si no existe
-        if [ ! -d "$CONDA_PREFIX/share/resfinder-4.6.0/db/resfinder_db" ]; then
-
-            # rm -rf $CONDA_PREFIX/share/resfinder-4.6.0/db/resfinder_db
-            git clone https://git@bitbucket.org/genomicepidemiology/resfinder_db.git $CONDA_PREFIX/share/resfinder-4.6.0/db/resfinder_db
-
-            # Modificamos variable entorno de forma permanente
-            echo "export CGE_BLASTN=$CONDA_PREFIX/bin/blastn" > $CONDA_PREFIX/etc/conda/activate.d/CGE.sh
-            echo "export CGE_RESFINDER_RESGENE_DB=$CONDA_PREFIX/share/resfinder-4.6.0/db/resfinder_db" >> $CONDA_PREFIX/etc/conda/activate.d/CGE.sh
-            chmod +x $CONDA_PREFIX/etc/conda/activate.d/CGE.sh
-        
+        if [ ! -d "{params.db_dir}/resfinder_db" ]; then
+            echo "[INFO] Clonando base de datos de ResFinder..." &>> {log}
+            git clone https://git@bitbucket.org/genomicepidemiology/resfinder_db.git {params.db_dir}/resfinder_db &>> {log}
+        else
+            echo "[INFO] Base de datos ResFinder ya existe." &>> {log}
         fi
-        
-        touch {output}
+
+        touch {output.flag}
         """

@@ -24,11 +24,19 @@ properties:
     type: string
     description: "Directorio de logs"
 
+  reference_data:
+    type: string
+    description: "Directorio descarga de bases de datos, genomas y demás ficheros necesarios para el análisis fuera de los programas"
+
   kraken2_db_url:
     type: string
     format: uri
     description: "URL de descarga de la base de datos Kraken2"
 
+  amrfinder_db_name:
+    type: string
+    description: "Amrfinder version"
+    
   params:
     type: object
     properties:

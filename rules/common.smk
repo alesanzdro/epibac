@@ -3,12 +3,30 @@ import re
 import pandas as pd
 import os
 
-# Variables BASES DE DATOS centralizas en carpeta resources
+REF_DATA = config["reference_data"]
+
+# ---------- KRAKEN2 ----------
 KRAKEN_DB_URL = config.get("kraken2_db_url")
 KRAKEN_DB_NAME = os.path.basename(KRAKEN_DB_URL).replace(".tar.gz", "")
-KRAKEN_DB_DIR = f"resources/databases/kraken2/{KRAKEN_DB_NAME}"
+KRAKEN_DB_DIR = f"{REF_DATA}/databases/kraken2/{KRAKEN_DB_NAME}"
 KRAKEN_DB_FLAG = f"{KRAKEN_DB_DIR}/.installed.flag"
-KRAKEN_DB_LOG = f"resources/databases/log/{KRAKEN_DB_NAME}.log"
+KRAKEN_DB_LOG = f"{REF_DATA}/databases/log/{KRAKEN_DB_NAME}.log"
+
+# ---------- AMRFINDER ----------
+AMRFINDER_DB_NAME = config.get("amrfinder_db_name", "latest")
+AMRFINDER_DB_DIR = f"{REF_DATA}/databases/amrfinder/{AMRFINDER_DB_NAME}"
+AMRFINDER_DB_FLAG = f"{AMRFINDER_DB_DIR}/.installed.flag"
+AMRFINDER_DB_LOG = f"{REF_DATA}/databases/log/amrfinder_{AMRFINDER_DB_NAME}.log"
+
+# ---------- RESFINDER ----------
+RESFINDER_DB_DIR = f"{REF_DATA}/databases/resfinder/resfinder_db"
+RESFINDER_DB_FLAG = f"{REF_DATA}/databases/resfinder/.installed.flag"
+RESFINDER_DB_LOG = f"{REF_DATA}/databases/log/resfinder.log"
+
+# ---------- PROKKA ----------
+PROKKA_DB_DIR = f"{REF_DATA}/databases/prokka"
+PROKKA_DB_FLAG = f"{PROKKA_DB_DIR}/.installed.flag"
+PROKKA_DB_LOG = f"{REF_DATA}/databases/log/prokka.log"
 
 # Función robusta para obtener el índice de muestras si el archivo validado ya existe
 def get_sample_index_if_exists():

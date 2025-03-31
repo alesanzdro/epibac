@@ -1,6 +1,6 @@
 rule epibac_prokka:
     input:
-        setup_db = f"{LOGDIR}/setup/setup_prokka_db.flag",
+        setup_db = PROKKA_DB_FLAG,
         fasta = lambda wc: f"{OUTDIR}/assembly/{wc.sample}/{wc.sample}.fasta" 
     output:
         faa = "{}/annotation/{{sample}}/{{sample}}.faa".format(OUTDIR),
@@ -10,6 +10,8 @@ rule epibac_prokka:
         f"{LOGDIR}/prokka/{{sample}}.log"
     conda:
         '../envs/epibac_amr_annotation.yml'
+    container: 
+        "docker://alesanzdro/epibac_amr_annotation:1.0"
     threads: get_resource("prokka","threads")
     resources:
         mem_mb = get_resource("prokka","mem"),

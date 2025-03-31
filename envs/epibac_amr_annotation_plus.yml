@@ -1,4 +1,4 @@
-name: epibac_amr_annotation_extra
+name: epibac_amr_annotation_plus
 channels:
   - conda-forge
   - bioconda

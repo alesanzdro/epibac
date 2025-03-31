@@ -12,6 +12,8 @@ rule epibac_fastqc_raw:
         f"{LOGDIR}/fastqc_raw/{{sample}}_r{{read}}.log"
     benchmark:
         f"{LOGDIR}/fastqc_raw/{{sample}}_r{{read}}.bmk"
+    container: 
+        "docker://alesanzdro/epibac_qc:1.0"
     wrapper:
         "v2.6.0/bio/fastqc"
 
@@ -30,6 +32,8 @@ checkpoint epibac_fastp_pe:
         f"{LOGDIR}/fastp/{{sample}}.log"
     conda:
         '../envs/epibac_qc.yml'
+    container: 
+        "docker://alesanzdro/epibac_qc:1.0"
     threads: get_resource("fastp","threads")
     resources:
         mem_mb=get_resource("fastp","mem"),
@@ -58,6 +62,8 @@ checkpoint epibac_fastp_pe_count:
         f"{LOGDIR}/count_reads/{{sample}}.log"
     conda:
         '../envs/epibac_qc.yml'
+    container: 
+        "docker://alesanzdro/epibac_qc:1.0"
     threads: get_resource("read_count","threads")
     resources:
         mem_mb = get_resource("read_count","mem"),
@@ -87,6 +93,8 @@ checkpoint validate_reads:
         r2=f"{OUTDIR}/trimmed/{{sample}}_r2.fastq.gz"
     output:
         validated=f"{OUTDIR}/validated/{{sample}}.validated"
+    container: 
+        "docker://alesanzdro/epibac_qc:1.0"
     run:
         cmd = f"zcat {input.r1} | wc -l"
         result = subprocess.run(cmd, shell=True, capture_output=True)
@@ -109,6 +117,8 @@ rule epibac_fastqc_trim:
         f"{LOGDIR}/fastqc_trim/{{sample}}_r{{read}}.log"
     benchmark:
         f"{LOGDIR}/fastqc_trim/{{sample}}_r{{read}}.bmk"
+    container: 
+        "docker://alesanzdro/epibac_qc:1.0"
     wrapper:
         "v2.6.0/bio/fastqc"
 
@@ -127,8 +137,10 @@ rule epibac_kraken2:
         db_path = KRAKEN_DB_DIR
     log:
         f"{LOGDIR}/kraken2/{{sample}}.log"
-    conda:
-        '../envs/epibac_qc.yml'
+    conda: 
+        "../envs/epibac_qc.yml"
+    container: 
+        "docker://alesanzdro/epibac_qc:1.0"
     threads: get_resource("kraken2", "threads")
     resources:
         mem_mb = get_resource("kraken2", "mem"),
@@ -145,19 +157,7 @@ rule epibac_kraken2:
             --use-names \
             &> {log}
         """
-        r"""
-        CONDA_PREFIX=${{CONDA_PREFIX}}
 
-        kraken2 \
-            --threads {threads} \
-            --db {params.db_path} \
-            --gzip-compressed \
-            --paired {input.r1} {input.r2} \
-            --output {output.report} \
-            --classified-out {params.classified_out} \
-            --use-names &>> {log}
-        """
-        
 rule epibac_quast:
     input:
         fasta=f"{OUTDIR}/assembly/{{sample}}/{{sample}}.fasta"
@@ -169,6 +169,8 @@ rule epibac_quast:
         f"{LOGDIR}/quast/{{sample}}.log"
     conda:
         '../envs/epibac_qc.yml'
+    container: 
+        "docker://alesanzdro/epibac_qc:1.0"
     threads: get_resource("quast", "threads")
     resources:
         mem_mb=get_resource("quast", "mem"),
@@ -217,5 +219,7 @@ rule multiqc:
     resources:
         mem_mb=get_resource("multiqc", "mem"),
         walltime=get_resource("multiqc", "walltime")
+    container: 
+        "docker://alesanzdro/epibac_qc:1.0"
     wrapper:
         "v2.9.1/bio/multiqc"
