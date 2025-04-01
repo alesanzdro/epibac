@@ -6,7 +6,8 @@ channels:
 dependencies:
   # Anotación
   - prokka=1.14.6
-  #- bakta=1.11.0
+  - perl-xml-simple
+  - perl-list-moreutils
   # Plásmidos
   - plasmidfinder=2.1.6
   - platon=1.7
@@ -16,6 +17,4 @@ dependencies:
   - sistr_cmd=1.1.1  # para Salmonella
   # Resistencia / virulencia
   - abricate=1.0.1
-  #- ncbi-amrfinderplus=4.0.19
-  #- rgi=6.0.3
   - staramr=0.11.0

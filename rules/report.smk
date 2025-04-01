@@ -35,6 +35,8 @@ rule epibac_summary_gestlab:
         f"{LOGDIR}/report/summary_gestlab.log"
     conda:
         '../envs/epibac_report.yml'
+    container: 
+        "docker://alesanzdro/epibac_report:1.0"
     threads: get_resource("summary", "threads")
     resources:
         mem_mb = get_resource("summary", "mem"),

@@ -24,11 +24,15 @@ properties:
     type: string
     description: "Directorio de logs"
 
+  refdir:
+    type: string
+    description: "Directorio descarga de bases de datos, genomas y demás ficheros necesarios para el análisis fuera de los programas"
+
   kraken2_db_url:
     type: string
     format: uri
     description: "URL de descarga de la base de datos Kraken2"
-
+    
   params:
     type: object
     properties:
@@ -80,6 +84,17 @@ properties:
             type: string
         required: [genome_size, refseq]
     additionalProperties: true
+
+  skip:
+    type: object
+    description: "Opciones para omitir partes específicas del pipeline"
+    properties:
+      prokka:
+        type: boolean
+        description: "Si es true, omite la instalación de bases de datos y ejecución de Prokka"
+      # Puedes añadir más opciones en el futuro
+    additionalProperties: false
+    default: {}
 
 required:
   - samples
