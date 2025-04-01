@@ -5,10 +5,14 @@ mode: "gva"  # Puede ser "normal" o "gva"
 
 outdir: "results"
 logdir: "logs"
-reference_data: "/ALMEIDA/PROJECTS/CODE/reference_data"
+refdir: "/ALMEIDA/PROJECTS/CODE/reference_data"
 
 #kraken2_db_url: "https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16gb_20241228.tar.gz"
 kraken2_db_url: "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_08gb_20241228.tar.gz"
+
+# Opciones de omisión
+skip:
+  prokka: false  # Cambiar a true para omitir Prokka
 
 params:
     min_reads: 1000

@@ -18,26 +18,7 @@ rule epibac_prokka:
         walltime = get_resource("prokka","walltime")
     params:
         prefix = lambda wc: f"{wc.sample}",
-        db_dir = PROKKA_DB_DIR
-    shell:
-        """
-        # Verifica si el archivo FASTA es vacío o no
-        if [ ! -s {input.fasta} ]; then
-            echo "[ERROR] El archivo FASTA {input.fasta} está vacío" &> {log}
-            mkdir -p {output.dir}
-            touch {output.faa}
-            touch {output.gff}
-            exit 0
-        fi
-
-        prokka \
-        --cpus {threads} \
-        {input.fasta} \
-        --prefix {params.prefix} \
-        --strain {params.prefix} \
-        --locustag {params.prefix} \
-        --hmms {params.db_dir}/PGAP.hmm \
-        --outdir {output.dir} \
-        --force \
-        &> {log}
-        """
+        db_dir = PROKKA_DB_DIR,
+        skip = should_skip("prokka")
+    script:
+        "../scripts/run_prokka.py"

@@ -33,73 +33,28 @@ rule setup_kraken2_database:
         """
 
 rule setup_prokka_database:
-    """
-    Configura todas las bases de datos de Prokka (HMM, BLAST, CM) en un directorio externo.
-    """
+    """Configura todas las bases de datos de Prokka (HMM, BLAST, CM) en un directorio externo."""
     output:
         flag = PROKKA_DB_FLAG
     log:
         PROKKA_DB_LOG
     params:
         db_dir = PROKKA_DB_DIR,
-        cm_files = ["Archaea", "Bacteria", "Viruses"]  # Archivos CM esenciales
+        cm_files = ["Archaea", "Bacteria", "Viruses"],
+        skip = should_skip("prokka")
+    conda:
+        '../envs/epibac_amr_annotation.yml'
     container:
         "docker://alesanzdro/epibac_amr_annotation:1.0"
     threads: 4
     shell:
-        r"""
-        # Crear estructura de directorios
-        mkdir -p {params.db_dir}/{{hmm,cm,kingdom}}
-
-        # ---- 1. Descargar HMMs de TIGRFAM (PGAP) ----
-        if [ ! -f "{params.db_dir}/PGAP.hmm.h3i" ]; then
-            echo -e "\n\n***** Descargando HMMs de PGAP... *****\n" &>> {log}
-            wget --no-check-certificate -O {params.db_dir}/hmm_PGAP.HMM.tgz \
-                https://ftp.ncbi.nlm.nih.gov/hmm/current/hmm_PGAP.HMM.tgz &>> {log}
-
-            # Descomprimir y filtrar duplicados
-            tar -xvzf {params.db_dir}/hmm_PGAP.HMM.tgz -C {params.db_dir} &>> {log}
-            find {params.db_dir}/hmm_PGAP -name "*.HMM" -exec cat {{}} + > {params.db_dir}/PGAP.hmm.raw
-            awk '/^NAME/ {{ if (a[$2]++) skip=1; else skip=0 }} !skip {{ print }}' \
-                {params.db_dir}/PGAP.hmm.raw > {params.db_dir}/PGAP.hmm
-
-            # Generar índices HMMER
-            hmmpress -f {params.db_dir}/PGAP.hmm &>> {log} || {{ echo "[ERROR] hmmpress falló"; exit 1; }}
+        """
+        if [ "{params.skip}" = "True" ]; then
+            echo "Omitiendo configuración de Prokka (skip_prokka=true)" > {log}
+            touch {output.flag}
+        else
+            bash {workflow.basedir}/scripts/setup_prokka.sh {params.db_dir} {output.flag} {log}
         fi
-
-        # ---- 2. Descargar CM de Rfam (Infernal) ----
-        echo -e "\n\n***** Descargando CM de Rfam... *****\n" &>> {log}
-        for cm_file in {params.cm_files}; do
-            if [ ! -f "{params.db_dir}/cm/$cm_file" ]; then
-                wget --no-check-certificate -O {params.db_dir}/cm/$cm_file \
-                    https://github.com/tseemann/prokka/raw/refs/heads/master/db/cm/$cm_file &>> {log}
-            fi
-        done
-
-        # ---- 3. Configurar TODAS las bases de datos de Prokka ----
-        echo -e "\n\n***** Configurando Prokka (HMM + BLAST + CM)... *****\n" &>> {log}
-        prokka --cpus {threads} --dbdir {params.db_dir} --setupdb &>> {log} || {{ echo "[ERROR] prokka --setupdb falló"; exit 1; }}
-
-        # ---- 4. Verificar archivos críticos ----
-        # HMM
-        for ext in "" .h3f .h3i .h3m .h3p; do
-            if [ ! -f "{params.db_dir}/PGAP.hmm$ext" ]; then
-                echo "[ERROR] PGAP.hmm$ext no existe" &>> {log}
-                exit 1
-            fi
-        done
-
-        # CM
-        for cm_file in {params.cm_files}; do
-            if [ ! -f "{params.db_dir}/cm/$cm_file" ]; then
-                echo "[ERROR] $cm_file no existe en cm/" &>> {log}
-                exit 1
-            fi
-        done
-
-        # ---- 5. Limpiar temporales ----
-        rm -rf {params.db_dir}/hmm_PGAP* {params.db_dir}/PGAP.hmm.raw
-        touch {output.flag}
         """
 
 rule setup_amrfinder_database:

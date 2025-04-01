@@ -6,7 +6,8 @@ channels:
 dependencies:
   # Anotación
   - prokka=1.14.6
-  - blast=2.16.0
+  - perl-xml-simple
+  - perl-list-moreutils
   # Plásmidos
   - plasmidfinder=2.1.6
   - platon=1.7
