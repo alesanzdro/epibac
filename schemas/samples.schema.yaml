@@ -3,13 +3,13 @@ description: "Esquema básico para samples_info.csv"
 type: object
 
 properties:
-  CODIGO_ORIGEN:
+  CODIGO_MUESTRA_ORIGEN:
     type: string
     description: "Código de origen de la cepa/muestra (obligatorio en todos los modos)"
   FECHA_TOMA_MUESTRA:
     type: string
     description: "Fecha en formato YYYY-MM-DD (la verificación se hace también en el script)."
-  MO:
+  ESPECIE_SECUENCIA:
     type: string
     description: "Organismo. Si no se conoce, se asignará UNKNOWN en el script."
     default: "UNKNOWN"
@@ -17,6 +17,15 @@ properties:
   PETICION:
     type: string
     description: "ID de petición (requerido en modo GVA, opcional en normal)."
+  NUM_BROTE:
+    type: string
+    description: "Número de brote  (modo GVA)."
+  CONFIRMACION:
+    type: string
+    description: "Confirmación de la muestra (modo GVA)."
+  COMENTARIO_WGS:
+    type: string
+    description: "Comentario WGS (modo GVA)."
   # CARRERA (solo se exige en modo GVA). No lo ponemos en required. Lo maneja el script.
   CARRERA:
     type: string
@@ -51,6 +60,6 @@ properties:
     default: ""
 
 #required:
-#  - CODIGO_ORIGEN      # siempre exigido
+#  - CODIGO_MUESTRA_ORIGEN      # siempre exigido
 #  - FECHA_TOMA_MUESTRA
 #  - MO

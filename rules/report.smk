@@ -66,30 +66,43 @@ rule epibac_summary_gestlab:
         # Renombramos columnas
         rename_map_gva = {
             "PETICION": "id",
-            "CODIGO_ORIGEN": "id2",
+            "CODIGO_MUESTRA_ORIGEN": "id2",
             "FECHA_TOMA_MUESTRA": "collection_date",
-            "MO": "organism",
+            "ESPECIE_SECUENCIA": "organism",
             "MOTIVO_WGS": "relevance",
             "CARRERA": "run_id",
             "ILLUMINA_R1": "illumina_r1",
             "ILLUMINA_R2": "illumina_r2",
             "ONT": "nanopore",
             "MODELO_DORADO": "dorado_model",
-            "ID-WGS": "Scheme_mlst",
-            "ST-WGS": "ST",
-            "MLST-WGS": "MLST",
-            "R-Geno-WGS": "AMR",
-            "PHENO-WGS": "PHENO_resfinder",
-            "V-WGS": "VIRULENCE"
+            "ID_WS": "Scheme_mlst",
+            "ST_WGS": "ST",
+            "MLST_WGS": "MLST",
+            "R_Geno_WGS": "AMR",
+            "PHENO_WGS": "PHENO_resfinder",
+            "V_WGS": "VIRULENCE",
+            "CONFIRMACION": "confirmation_note",
+            "NUM_BROTE": "outbreak_id",
+            "COMENTARIO_WGS": "comment"
         }
+
         df_merged.rename(columns={v: k for k, v in rename_map_gva.items()}, inplace=True)
 
         # Añadir columnas extra
-        df_merged['MO-EST-WGS'] = "Bacterias"
-        df_merged['Tipo_Analisis_WGS'] = "Verificación"
-        df_merged['Plasmidos-WGS'] = pd.NA
+        df_merged['MO_EST_WGS'] = "BACTERIA"
+        df_merged['TIPO_ANALISIS_WGS'] = "VERIFICACION"
+        df_merged['PLASMIDOS_WGS'] = pd.NA
 
-        # Generar Fichero_lecturas_WGS
+        # Asignar las columnas adicionales del modo GVA si existen
+        # Si NUM_BROTE ya está en df_meta, se mantendrá en df_merged      
+
+        # Simplificamos columnas de nombres de ficheros
+        for col in ["ILLUMINA_R1", "ILLUMINA_R2", "ONT"]:
+            if col in df_merged.columns:
+                df_merged[col] = df_merged[col].apply(lambda x: os.path.basename(x) if pd.notna(x) and x != "" else x)
+
+
+        # Generar FICHERO_LECTURAS_WGS
         def build_path(row):
             if pd.isna(row['CARRERA']):
                 return pd.NA
@@ -99,12 +112,8 @@ rule epibac_summary_gestlab:
             hosp = parts[1][:-3]  # Quitar los últimos 3 números
             return f"\\\\NLSAR\\deposito\\CVA_{hosp}\\illumina\\{row['CARRERA']}"
 
-        df_merged['Fichero_lecturas_WGS'] = df_merged.apply(build_path, axis=1)
+        df_merged['FICHEROS_LECTURAS_WGS'] = df_merged.apply(build_path, axis=1)
 
-        # Simplificamos columnas de nombres de ficheros
-        for col in ["ILLUMINA_R1", "ILLUMINA_R2", "ONT"]:
-            if col in df_merged.columns:
-                df_merged[col] = df_merged[col].apply(lambda x: os.path.basename(x) if pd.notna(x) and x != "" else x)
 
         # Guardar
         df_merged.to_csv(output.gestlab_report, sep=";", index=False)

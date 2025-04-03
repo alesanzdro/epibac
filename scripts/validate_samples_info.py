@@ -12,14 +12,15 @@ Proceso:
 4. Realiza validaciones extra y normalizaciones:
    - Fechas en FECHA_TOMA_MUESTRA => AAAA-MM-DD (detecta formatos 'DD/MM/YY', etc.).
    - Modo GVA => PETICION y CARRERA obligatorias, con formato 'AAMMDD_HOSPxxx' en CARRERA.
-   - Modo normal => al menos uno de id o id2 (o si usas CODIGO_ORIGEN/PETICION, etc.).
+   - Modo normal => al menos uno de id o id2 (o si usas CODIGO_MUESTRA_ORIGEN/PETICION, etc.).
    - Illumina => si ILLUMINA_R1 está, ILLUMINA_R2 también y viceversa.
    - ONT => si ONT está, MODELO_DORADO también.
-   - Normaliza MO (minusculas, guiones bajos), avisa si no existe en config.yaml.
+   - Normaliza ESPECIE_SECUENCIA (minusculas, guiones bajos), avisa si no existe en config.yaml.
 5. Registra advertencias/correcciones en un log. Si hay errores graves, sale con exit code 1.
 """
 
 import sys
+import gzip
 import os
 import csv
 import yaml
@@ -27,6 +28,49 @@ import re
 import datetime
 from snakemake.utils import validate
 import pandas as pd
+
+def is_valid_fastq_gz(filepath):
+    """
+    Verifica que un archivo:
+    1. Existe
+    2. Tiene extensión .gz
+    3. No está vacío
+    4. Es un archivo gzip válido y legible
+    5. Parece contener datos FASTQ (líneas que comienzan con @)
+    
+    Retorna (es_valido, mensaje_error)
+    """
+    try:
+        if not os.path.exists(filepath):
+            return False, f"El archivo no existe: '{filepath}'"
+            
+        if not filepath.lower().endswith('.gz'):
+            return False, f"El archivo no tiene extensión .gz: '{filepath}'"
+            
+        if os.path.getsize(filepath) == 0:
+            return False, f"El archivo está vacío: '{filepath}'"
+            
+        # Intentar abrir y leer las primeras líneas para verificar que es un gzip válido
+        with gzip.open(filepath, 'rt') as f:
+            # Leemos las primeras 4 líneas para verificar formato FASTQ
+            lines = [f.readline() for _ in range(4)]
+            
+            # Si no hay contenido, el archivo está vacío o corrupto
+            if not lines or not lines[0]:
+                return False, f"El archivo no contiene datos: '{filepath}'"
+                
+            # Verificar que parece formato FASTQ (primera línea empieza con @)
+            if not lines[0].startswith('@'):
+                return False, f"El archivo no parece tener formato FASTQ (no empieza con @): '{filepath}'"
+                
+        return True, ""
+    except gzip.BadGzipFile:
+        return False, f"El archivo no es un gzip válido: '{filepath}'"
+    except PermissionError:
+        return False, f"No hay permisos para leer el archivo: '{filepath}'"
+    except Exception as e:
+        return False, f"Error al validar el archivo: '{filepath}': {str(e)}"
+
 
 def main():
     if len(sys.argv) < 6:
@@ -79,7 +123,7 @@ def main():
 
     # Funciones auxiliares
     def log_warning(line_idx, peticion, msg):
-        """Registra un warning con info de línea y PETICION (o CODIGO_ORIGEN)"""
+        """Registra un warning con info de línea y PETICION (o CODIGO_MUESTRA_ORIGEN)"""
         warnings_list.append((line_idx, peticion, msg))
 
     def parse_and_normalize_date(dstr):
@@ -124,12 +168,12 @@ def main():
     # Recorremos filas y aplicamos validaciones
     for i, row in df.iterrows():
         # Para identificar la muestra, tomamos algo único. 
-        # Podrías usar CODIGO_ORIGEN, PETICION, etc.
+        # Podrías usar CODIGO_MUESTRA_ORIGEN, PETICION, etc.
         peticion_val = row.get("PETICION", "").strip()
-        codigo_origen = row.get("CODIGO_ORIGEN", "").strip()
-        if not codigo_origen:
+        codigo_muestra_origen = row.get("CODIGO_MUESTRA_ORIGEN", "").strip()
+        if not codigo_muestra_origen:
             # Este ya se valida en el schema como required, pero lo chequeamos
-            errors_list.append((i+1, peticion_val, "CODIGO_ORIGEN está vacío."))
+            errors_list.append((i+1, peticion_val, "CODIGO_MUESTRA_ORIGEN está vacío."))
             continue
 
         ### 4a) Normalizar fecha FECHA_TOMA_MUESTRA
@@ -150,19 +194,19 @@ def main():
         except ValueError as ve:
             errors_list.append((i+1, peticion_val, f"Fecha inválida '{fecha_str}': {ve}"))
 
-        ### 4b) Organismo (MO) => normalizar a minusculas, guiones bajos
-        mo_str = row.get("MO", "").strip()
+        ### 4b) Organismo (ESPECIE_SECUENCIA) => normalizar a minusculas, guiones bajos
+        mo_str = row.get("ESPECIE_SECUENCIA", "").strip()
         if not mo_str:
             # El esquema ya lo requiere. Si está vacío => pondremos 'UNKNOWN'
             mo_str = "UNKNOWN"
-            df.at[i, "MO"] = mo_str
+            df.at[i, "ESPECIE_SECUENCIA"] = mo_str
         else:
             # Normaliza
             mo_normalized = re.sub(r"\s+", "_", mo_str.strip().lower())
             if mo_normalized != mo_str:
                 log_warning(i+1, peticion_val, 
                             f"Organismo '{mo_str}' normalizado a '{mo_normalized}'.")
-            df.at[i, "MO"] = mo_normalized
+            df.at[i, "ESPECIE_SECUENCIA"] = mo_normalized
             # Chequeo si está en la lista de config
             if valid_species and mo_normalized not in valid_species:
                 log_warning(i+1, peticion_val, 
@@ -203,12 +247,15 @@ def main():
                 errors_list.append((i+1, peticion_val, 
                     "Tiene uno de ILLUMINA_R1/ILLUMINA_R2 pero no el otro."))
             else:
-                # Chequeo de existencia de archivos (opcional)
-                # if not os.path.exists(r1):
-                #     errors_list.append((i+1, peticion_val, f"No existe el archivo '{r1}'."))
-                # if not os.path.exists(r2):
-                #     errors_list.append((i+1, peticion_val, f"No existe el archivo '{r2}'."))
-                pass
+                # Verificar R1
+                valid_r1, error_r1 = is_valid_fastq_gz(r1)
+                if not valid_r1:
+                    errors_list.append((i+1, peticion_val, f"ILLUMINA_R1: {error_r1}"))
+                    
+                # Verificar R2
+                valid_r2, error_r2 = is_valid_fastq_gz(r2)
+                if not valid_r2:
+                    errors_list.append((i+1, peticion_val, f"ILLUMINA_R2: {error_r2}"))
 
         ### 4e) Validar Nanopore => ONT y MODELO_DORADO
         ont = row.get("ONT", "").strip()
@@ -218,10 +265,16 @@ def main():
                 errors_list.append((i+1, peticion_val, 
                     "Se indica ONT pero falta MODELO_DORADO."))
             else:
-                # if not os.path.exists(ont):
-                #     errors_list.append((i+1, peticion_val, f"No existe el archivo ONT '{ont}'."))
-                # validación extra de dorado si tienes lista
-                pass
+                # Verificar archivo ONT
+                valid_ont, error_ont = is_valid_fastq_gz(ont)
+                if not valid_ont:
+                    errors_list.append((i+1, peticion_val, f"ONT: {error_ont}"))
+                
+                # Validación del modelo Dorado
+                valid_models = ["dna_r10.4.1_e8.2_400bps_sup@v4.2.0", "dna_r10.4.1_e8.2_400bps_hac@v4.2.0"]
+                if dorado not in valid_models:
+                    log_warning(i+1, peticion_val, 
+                        f"MODELO_DORADO '{dorado}' no está en la lista de modelos conocidos: {', '.join(valid_models)}")
         else:
             if dorado:
                 log_warning(i+1, peticion_val, 
@@ -253,29 +306,45 @@ def main():
     # en caso de ser mode gva
     rename_map_gva = {
     "PETICION": "id",
-    "CODIGO_ORIGEN": "id2",
+    "CODIGO_MUESTRA_ORIGEN": "id2",
     "FECHA_TOMA_MUESTRA": "collection_date",
-    "MO": "organism",
+    "ESPECIE_SECUENCIA": "organism",
     "MOTIVO_WGS": "relevance",
     "CARRERA": "run_id",
     "ILLUMINA_R1": "illumina_r1",
     "ILLUMINA_R2": "illumina_r2",
     "ONT": "nanopore",
-    "MODELO_DORADO": "dorado_model"
+    "MODELO_DORADO": "dorado_model",
+    "CONFIRMACION": "confirmation_note",
+    "NUM_BROTE": "outbreak_id",
+    "COMENTARIO_WGS": "comment"
     }
 
+    # Columnas obligatorias en modo normal
+    required_normal = ["id", "collection_date", "organism"]
+    # Además, se requiere al menos uno de estos pares: (illumina_r1, illumina_r2) o (nanopore, dorado_model)
 
     # Luego de validar y antes de renombrar columnas
     if config.get("mode") == "gva":
+        # Primero verificamos si existen las columnas que queremos preservar
+        # y las creamos si no existen
+        for col in ["NUM_BROTE", "CONFIRMACION", "COMENTARIO_WGS"]:
+            if col not in df.columns:
+                df[col] = ""
+
         # Elimina columnas 'id' e 'id2' si existen y están completamente vacías
         for col in ["id", "id2"]:
             if col in df.columns and df[col].str.strip().eq("").all():
                 df.drop(columns=col, inplace=True)
 
-        # Renombra desde PETICION y CODIGO_ORIGEN
+        # Guardar todas las columnas no mapeadas para preservarlas
+        extra_columns = {col: col for col in df.columns if col not in rename_map_gva.keys() and col not in rename_map_gva.values()}
+        
+        # Renombra desde PETICION y CODIGO_MUESTRA_ORIGEN
         df.rename(columns=rename_map_gva, inplace=True)
+        
     else:
-        # En modo normal, no se renombran PETICION y CODIGO_ORIGEN, solo se validan
+        # En modo normal, no se renombran PETICION y CODIGO_MUESTRA_ORIGEN, solo se validan
         pass
    
     df.to_csv(samples_info_validated, sep=';', index=False)
