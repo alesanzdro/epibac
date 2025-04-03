@@ -1,65 +1,47 @@
 $schema: "http://json-schema.org/draft-07/schema#"
-description: "Esquema básico para samples_info.csv"
+title: "Esquema para archivo de muestras"
+description: "Esquema para validar el archivo de muestras en modo normal o GVA"
 type: object
 
 properties:
-  CODIGO_MUESTRA_ORIGEN:
-    type: string
-    description: "Código de origen de la cepa/muestra (obligatorio en todos los modos)"
-  FECHA_TOMA_MUESTRA:
-    type: string
-    description: "Fecha en formato YYYY-MM-DD (la verificación se hace también en el script)."
-  ESPECIE_SECUENCIA:
-    type: string
-    description: "Organismo. Si no se conoce, se asignará UNKNOWN en el script."
-    default: "UNKNOWN"
-  # PETICION (solo se exige en GVA, así que no lo marcamos required en el esquema)
-  PETICION:
-    type: string
-    description: "ID de petición (requerido en modo GVA, opcional en normal)."
-  NUM_BROTE:
-    type: string
-    description: "Número de brote  (modo GVA)."
-  CONFIRMACION:
-    type: string
-    description: "Confirmación de la muestra (modo GVA)."
-  COMENTARIO_WGS:
-    type: string
-    description: "Comentario WGS (modo GVA)."
-  # CARRERA (solo se exige en modo GVA). No lo ponemos en required. Lo maneja el script.
-  CARRERA:
-    type: string
-    description: "Código AAMMDD_HOSPXXX (modo GVA)."
-  # Campos Illumina
-  ILLUMINA_R1:
-    type: string
-    description: "Ruta al FASTQ Illumina R1."
-    default: ""
-  ILLUMINA_R2:
-    type: string
-    description: "Ruta al FASTQ Illumina R2."
-    default: ""
-  # Campos Nanopore
-  ONT:
-    type: string
-    description: "Ruta al FASTQ Nanopore."
-    default: ""
-  MODELO_DORADO:
-    type: string
-    description: "Modelo DORADO a usar (si ONT está presente)."
-    default: ""
-
-  # id / id2 en modo normal, etc., pero si no existen siempre, no los ponemos en required.
   id:
     type: string
-    description: "ID alternativo de la muestra (modo normal)."
-    default: ""
+    description: "Identificador principal de la muestra (obligatorio)"
   id2:
-    type: string
-    description: "ID secundario alternativo (modo normal)."
-    default: ""
+    type: [string, null]
+    description: "Identificador secundario (obligatorio en modo GVA)"
+  collection_date:
+    type: [string, null]
+    description: "Fecha de recolección (formato preferido: YYYY-MM-DD)"
+  organism:
+    type: [string, null]
+    description: "Organismo"
+  illumina_r1:
+    type: [string, null]
+    description: "Ruta al archivo FASTQ R1 de Illumina"
+  illumina_r2:
+    type: [string, null]
+    description: "Ruta al archivo FASTQ R2 de Illumina"
+  ont:
+    type: [string, null]
+    description: "Ruta al archivo FASTQ de Oxford Nanopore"
+  outbreak_id:
+    type: [string, null]
+    description: "Identificador de brote (solo en modo GVA)"
+  relevance:
+    type: [string, null]
+    description: "Relevancia o motivo WGS (solo en modo GVA)"
+  comment:
+    type: [string, null]
+    description: "Comentarios adicionales"
+  confirmation_note:
+    type: [string, null]
+    description: "Notas de confirmación (solo en modo GVA)"
 
-#required:
-#  - CODIGO_MUESTRA_ORIGEN      # siempre exigido
-#  - FECHA_TOMA_MUESTRA
-#  - MO
+oneOf:
+  - required: ["id", "illumina_r1", "illumina_r2"]
+    description: "Muestra con secuenciación Illumina (paired-end)"
+  - required: ["id", "ont"]
+    description: "Muestra con secuenciación Nanopore"
+  - required: ["id", "illumina_r1", "illumina_r2", "ont"]
+    description: "Muestra con secuenciación híbrida (Illumina + Nanopore)"

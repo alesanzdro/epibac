@@ -1,24 +1,28 @@
 samples: "test/samples_info.csv"
+outdir: "test/output"
+logdir: "test/logs"
 
-primary_id_column: "id2" # Identificador primario de las muestras PETICION (id) o CODIGO_MUESTRA_ORIGEN (id2)
-mode: "gva"  # Puede ser "normal" o "gva"
-
-outdir: "results"
-logdir: "logs"
-refdir: "/ALMEIDA/PROJECTS/CODE/reference_data"
+# Modo de análisis para lanzar EPIBAC
+epibac_mode: "gva" # Puede ser "normal" o "gva"
 
 # Opciones de omisión
 skip:
   prokka: false  # Cambiar a true para omitir Prokka
 
-# Parámetros específicos modo GVA
-mode_config:
-  gva:
-    storage_cabinet: "/home/asanzc/CabinaCS/NLSAR"  # Cabina de almacenamiento para GVA
-    hospital: "CAST"  # Código de hospital predeterminado (4 letras)
-    # Hospitales posibles: CAST, ALIC, LAFE, PESE, ELCH, GRAL, CLIN, EPIM
-
+# PARÁMETROS
 params:
+    refdir: "resources"
+    run_name: "240512_CLIN002"
+    # Modelo de Dorado para muestras Nanopore (requerido si hay muestras Nanopore)
+    dorado_model: "dna_r10.4.1_e8.2_400bps_sup@v4.2.0"
+    mode_config:
+        gva:
+          # Identificador primario de las muestras PETICION (id) o CODIGO_MUESTRA_ORIGEN (id2)
+          primary_id_column: "id2"
+          # Ruta de la carpeta Cabina de la Conselleria GVA para el copiado de los ficheros
+          storage_cabinet: "/home/asanzc/CabinaCS/NLSAR"
+        normal:
+          primary_id_column: "id"
     min_reads: 1000
     fastp:
         extra: "--cut_tail --cut_window_size=10 --cut_mean_quality=20 --length_required=50 --correction"
@@ -27,9 +31,8 @@ params:
     resfinder:
         extra: "-l 0.6 -t 0.8 --acquired"
     kraken2:
-        kraken2_db_url: "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_08gb_20241228.tar.gz"
-        #kraken2_db_url: "https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16gb_20241228.tar.gz"
-
+        db_url: "https://genome-idx.s3.amazonaws.com/kraken/k2_standard_08gb_20241228.tar.gz"
+        #db_url: "https://genome-idx.s3.amazonaws.com/kraken/k2_pluspf_16gb_20241228.tar.gz"
 
 resources:
     default:
@@ -82,7 +85,6 @@ resources:
         walltime: 480
 
 species:
-
   acinetobacter_baumannii:         # min ~3400000 max ~4200000
     genome_size: 3900000
     refseq: GCF_000015425.1

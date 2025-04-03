@@ -1,0 +1,2 @@
+id;collection_date;orgnanism;illumina_r1;illumina_r2;ont
+23_SALM_9212;12/2/24;Salmonella enterica;test/raw_data/23_SALM_92123_S27_R1_001.fastq.gz;test/raw_data/23_SALM_92123_S27_R2_001.fastq.gz;

@@ -45,7 +45,7 @@ def should_skip(component):
 # =================== CONFIGURACIÓN DE BASES DE DATOS =================== #
 
 # ----- KRAKEN2 -----
-KRAKEN_DB_URL = config.get("kraken2_db_url")
+KRAKEN_DB_URL = config["params"]["kraken2"]["db_url"]
 KRAKEN_DB_NAME = os.path.basename(KRAKEN_DB_URL).replace(".tar.gz", "")
 KRAKEN_DB_DIR = f"{REFDIR}/databases/kraken2/{KRAKEN_DB_NAME}"
 KRAKEN_DB_FLAG = f"{KRAKEN_DB_DIR}/.installed.flag"
@@ -188,8 +188,8 @@ def get_all_inputs():
     inputs = [
         f"{OUTDIR}/samples_info_validated.csv",
         f"{OUTDIR}/qc/multiqc.html",
-        f"{OUTDIR}/report/{DATE}_EPIBAC.tsv",
-        f"{OUTDIR}/report/{DATE}_EPIBAC.xlsx",
+        f"{OUTDIR}/report/{TAG_RUN}_EPIBAC.tsv",
+        f"{OUTDIR}/report/{TAG_RUN}_EPIBAC.xlsx",
     ]
     
     # Si no estamos omitiendo Prokka, añadimos su metadata
@@ -197,8 +197,9 @@ def get_all_inputs():
         inputs.append(f"{REFDIR}/databases/prokka/VERSION.txt")
     
     # Si estamos en modo GVA, añadimos también el reporte para GESTLAB
-    if config.get("mode") == "gva":
-        inputs.append(f"{OUTDIR}/report/{DATE}_EPIBAC_GESTLAB.csv")
+    if config.get("epibac_mode") == "gva":
+        inputs.append(f"{OUTDIR}/report/{TAG_RUN}_EPIBAC_GESTLAB.csv"),
+        inputs.append(f"{OUTDIR}/report/{TAG_RUN}_file_copy_log.txt")
     
     return inputs
 
