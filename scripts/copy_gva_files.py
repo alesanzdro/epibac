@@ -166,8 +166,7 @@ def main():
         # Obtener storage_cabinet solo si estamos en modo gva
         storage_cabinet = None
         if mode == "gva":
-            storage_cabinet = config.get("params", {}).get("mode_config", {}).get("gva", {}).get("storage_cabinet", "")
-            
+            storage_cabinet = config.get("mode_config", {}).get("gva", {}).get("storage_cabinet", "")            
             # Verificar si storage_cabinet existe
             if storage_cabinet and not os.path.exists(storage_cabinet):
                 print(f"Advertencia: El directorio storage_cabinet '{storage_cabinet}' no existe", file=sys.stderr)

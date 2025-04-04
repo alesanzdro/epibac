@@ -5,19 +5,45 @@ properties:
   samples:
     type: string
     description: "Ruta al fichero de muestras"
-  
   outdir:
     type: string
     description: "Directorio de resultados"
-
   logdir:
     type: string
     description: "Directorio de logs"
-
-  epibac_mode:
+  refdir:
+    type: string
+    description: "Directorio de recursos y bases de datos"
+  # CONFIGURACIÓN DEL PIPELINE
+  mode:
     type: string
     enum: ["gva", "normal"]
     description: "Modo de análisis EPIBAC"
+  run_name:
+    type: string
+    description: "Nombre de la carrera"
+  mode_config:
+    type: object
+    properties:
+      gva:
+        type: object
+        properties:
+          primary_id_column:
+            type: string
+            enum: ["id", "id2"]
+            default: "id2"
+            description: "Identificador primario para modo GVA"
+          storage_cabinet:
+            type: string
+            description: "Directorio de almacenamiento para la Cabina GVA"
+      normal:
+        type: object
+        properties:
+          primary_id_column:
+            type: string
+            enum: ["id"]
+            default: "id"
+            description: "Identificador primario para modo normal"
 
   skip:
     type: object
@@ -32,47 +58,13 @@ properties:
   params:
     type: object
     properties:
-    
-      run_name:
-        type: string
-        description: "Nombre de la carrera. En modo GVA debe seguir el formato AAMMDD_HOSPXXX"
-        
-      refdir:
-        type: string
-        description: "Directorio descarga de bases de datos, genomas y ficheros necesarios"
-      
-      dorado_model:
-        type: string
-        enum: ["dna_r10.4.1_e8.2_400bps_hac@v4.2.0", "dna_r10.4.1_e8.2_400bps_sup@v4.2.0",
-            "dna_r9.4.1_450bps_hac@v3.3", "dna_r9.4.1_450bps_sup@v3.3"]
-        description: "Modelo de Dorado para muestras Nanopore"
-
-      mode_config:
+      nanopore:
         type: object
         properties:
-          gva:
-            type: object
-            properties:
-              primary_id_column:
-                type: string
-                enum: ["id", "id2"]
-                default: "id2"
-                description: "Identificador primario para modo GVA"
-              storage_cabinet:
-                type: string
-                description: "Directorio de almacenamiento para la Cabina GVA"
-            required:
-              - primary_id_column
-          normal:
-            type: object
-            properties:
-              primary_id_column:
-                type: string
-                enum: ["id"]
-                default: "id"
-                description: "Identificador primario para modo normal"
-            required:
-              - primary_id_column
+          dorado_model:
+            type: string
+            enum: ["dna_r10.4.1_e8.2_400bps_hac@v4.2.0", "dna_r10.4.1_e8.2_400bps_sup@v4.2.0", "dna_r9.4.1_450bps_hac@v3.3", "dna_r9.4.1_450bps_sup@v3.3"]
+            description: "Modelo de Dorado para muestras Nanopore"
       
       min_reads:
         type: integer
@@ -100,7 +92,7 @@ properties:
             description: "URL para descargar la base de datos de Kraken2"
         required: [db_url]
     
-    required: [mode, run_name, refdir, mode_config, min_reads, fastp, unicycler, resfinder, kraken2]
+    required: [mode_config, min_reads, fastp, unicycler, resfinder, kraken2]
     
     # Validar que run_name siga el formato AAMMDD_HOSPXXX en modo GVA
     allOf:
@@ -154,9 +146,12 @@ properties:
     additionalProperties: true
 
 required:
+  - mode
   - samples
   - outdir
   - logdir
+  - refdir
+  - run_name
   - params
   - resources
   - species

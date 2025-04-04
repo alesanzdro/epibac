@@ -197,7 +197,7 @@ def get_all_inputs():
         inputs.append(f"{REFDIR}/databases/prokka/VERSION.txt")
     
     # Si estamos en modo GVA, añadimos también el reporte para GESTLAB
-    if config.get("epibac_mode") == "gva":
+    if config.get("mode") == "gva":
         inputs.append(f"{OUTDIR}/report/{TAG_RUN}_EPIBAC_GESTLAB.csv"),
         inputs.append(f"{OUTDIR}/report/{TAG_RUN}_file_copy_log.txt")
     
@@ -206,3 +206,4 @@ def get_all_inputs():
 # Wildcard constraints
 wildcard_constraints:
     sample="[^/]+"
+

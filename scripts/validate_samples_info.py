@@ -21,11 +21,11 @@ def validate_samples(samples_file, schema_file, config_file, warnings_file, outp
         sys.exit(f"Error al cargar la configuración: {e}")
     
     # Determinar el modo de análisis
-    mode = config.get("epibac_mode", "normal")
+    mode = config.get("mode", "normal")
     
     # Si estamos en modo GVA, validar el código de hospital en run_name
     if mode == "gva":
-        run_name = config.get("params", {}).get("run_name", "")
+        run_name = config.get("run_name", "")
         if run_name:
             # Extraer el código de hospital (formato esperado: AAMMDD_HOSPXXX)
             parts = run_name.split("_")
@@ -88,7 +88,11 @@ def validate_samples(samples_file, schema_file, config_file, warnings_file, outp
         df = df.rename(columns=rename_dict)
         
         # Obtener primary_id_column según la configuración
-        primary_id_column = config.get("params", {}).get("mode_config", {}).get("gva", {}).get("primary_id_column", "id2")
+        # Obtener primary_id_column según la configuración
+        if mode == "gva":
+            primary_id_column = config.get("mode_config", {}).get("gva", {}).get("primary_id_column", "id2")
+        else:
+            primary_id_column = config.get("mode_config", {}).get("normal", {}).get("primary_id_column", "id")
         
         # Verificar que primary_id_column existe después del renombrado
         if primary_id_column not in df.columns:
@@ -163,7 +167,9 @@ def validate_samples(samples_file, schema_file, config_file, warnings_file, outp
         has_nanopore = True
     
     if has_nanopore:
-        dorado_model = config.get("params", {}).get("dorado_model", None)
+        dorado_model = config.get("params", {}).get("nanopore", {}).get("dorado_model", None)
+        
+
         if not dorado_model:
             sys.exit(f"Error: Se detectaron muestras Nanopore pero no se ha especificado dorado_model en config.yaml")
         

@@ -14,6 +14,18 @@ validate(config, schema="schemas/config.schema.yaml")
 OUTDIR = config["outdir"]
 LOGDIR = config["logdir"]
 
+# Verificar las variables globales
+OUTDIR = config["outdir"]
+LOGDIR = config["logdir"]
+REFDIR = config["refdir"]
+# Obtener modo de análisis
+MODE = config["mode"] 
+TAG_RUN = config["run_name"]
+
+# Verificación del modo GVA
+if MODE == "gva":  # Usar MODE en lugar de config["epibac_mode"]
+    # Resto del código sin cambios
+
 # Obtener fecha actual en formato YYMMDD para usar como TAG_RUN por defecto
 DEFAULT_DATE = datetime.now().strftime("%y%m%d")
 
@@ -23,17 +35,12 @@ if "params" in config and "run_name" in config["params"]:
 else:
     TAG_RUN = DEFAULT_DATE
 
-# Obtener modo de análisis
-mode = config.get("epibac_mode", "normal")
 
 # Verificar si el formato del run_name es válido para modo GVA
-if mode == "gva":
+if MODE == "gva":
     run_pattern = re.compile(r"^\d{6}_[A-Z]{4}\d{3}$")
     if not run_pattern.match(TAG_RUN):
         sys.exit(f"Error: En modo GVA, run_name debe seguir el formato AAMMDD_HOSPXXX. Valor actual: {TAG_RUN}")
-
-# Definir REFDIR basado en la nueva ubicación en config
-REFDIR = config["params"]["refdir"]
 
 # Importar módulos (common.smk primero para tener disponibles sus funciones)
 include: "rules/common.smk"

@@ -10,6 +10,27 @@ eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/almeida-git.key
 
 
+
+
+git commit -m 'refactor: improve configuration and validation system
+
+- Move configuration structure from params.mode to epibac_mode
+- Add robust date parsing for DD/MM/YY format in sample validation
+- Implement hospital code validation from run_name (AAMMDD_HOSPXXX)
+- Fix Kraken2 database configuration structure
+- Add validation for required fields based on analysis mode (GVA/normal)
+- Improve error handling and warning messages
+- Update file naming to use TAG_RUN instead of DATE
+
+The changes simplify the configuration structure while adding stronger
+validation for dates, hospital codes and mandatory fields. This ensures
+data consistency especially for GVA mode requirements.
+
+Breaking changes:
+- Configuration key params.mode is now epibac_mode
+- Kraken2 database config structure has changed'
+
+
 2. Modificación del script validate_samples_info.py
 Este script ahora tendrá que realizar validaciones adicionales como:
 
