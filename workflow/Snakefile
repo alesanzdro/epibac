@@ -1,0 +1,123 @@
+# Snakefile principal para EPIBAC
+
+import os
+import sys
+import re
+from pathlib import Path
+from datetime import datetime
+
+# Configuración de directorios
+WORKFLOW_DIR = Path(workflow.basedir)
+PROJECT_DIR = WORKFLOW_DIR.parent
+SCRIPTS_DIR = WORKFLOW_DIR / "scripts"
+ENVS_DIR = WORKFLOW_DIR / "envs"
+
+
+# Función para configurar rutas absolutas
+def get_abs_path(path):
+    if os.path.isabs(path):
+        return path
+    else:
+        return os.path.abspath(os.path.join(PROJECT_DIR, path))
+
+
+# Cargar configuración
+configfile: os.path.join(PROJECT_DIR, "config.yaml")
+
+
+# Establecer directorios de salida
+if "outdir" in config:
+    OUTDIR = get_abs_path(config["outdir"])
+else:
+    OUTDIR = os.path.join(PROJECT_DIR, "output")
+
+# Establecer directorio de logs
+if "logdir" in config:
+    LOGDIR = get_abs_path(config["logdir"])
+else:
+    LOGDIR = os.path.join(PROJECT_DIR, "logs")
+
+# Establecer directorio de recursos/bases de datos
+if "refdir" in config:
+    REFDIR = get_abs_path(config["refdir"])
+else:
+    REFDIR = os.path.join(PROJECT_DIR, "resources")
+
+# Variables globales predeterminadas
+RESOURCES_DIR = REFDIR  # Para compatibilidad
+DB_DIR = os.path.join(REFDIR, "databases")
+SINGULARITY_PREFIX = os.path.join(RESOURCES_DIR, "singularity_images")
+
+# Obtener modo de análisis
+MODE = config.get("mode", "gva")
+
+# Obtener fecha actual en formato YYMMDD para usar como fallback
+DEFAULT_DATE = datetime.now().strftime("%y%m%d")
+
+# Definir TAG_RUN basado en config o usar fecha actual como fallback
+if "run_name" in config:
+    TAG_RUN = config["run_name"]
+elif "params" in config and "run_name" in config["params"]:
+    TAG_RUN = config["params"]["run_name"]
+else:
+    TAG_RUN = DEFAULT_DATE
+
+# Verificar si el formato del run_name es válido para modo GVA
+if MODE == "gva":
+    run_pattern = re.compile(r"^\d{6}_[A-Z]{4}\d{3}$")
+    if not run_pattern.match(TAG_RUN):
+        print(
+            f"Error: En modo GVA, run_name debe seguir el formato AAMMDD_HOSPXXX. Valor actual: {TAG_RUN}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+# Crear directorios necesarios
+os.makedirs(OUTDIR, exist_ok=True)
+os.makedirs(LOGDIR, exist_ok=True)
+os.makedirs(os.path.join(DB_DIR, "log"), exist_ok=True)
+
+# Validar configuración con esquema (comentado para diagnóstico)
+# from snakemake.utils import validate
+# try:
+#     validate(config, os.path.join(WORKFLOW_DIR, "schemas/config.schema.yaml"))
+# except Exception as e:
+#     print(f"Error validando configuración: {e}", file=sys.stderr)
+#     sys.exit(1)
+
+
+# Cargar reglas modulares
+include: os.path.join(WORKFLOW_DIR, "rules/common.smk")
+include: os.path.join(WORKFLOW_DIR, "rules/setup.smk")
+include: os.path.join(WORKFLOW_DIR, "rules/qc.smk")
+include: os.path.join(WORKFLOW_DIR, "rules/assembly.smk")
+include: os.path.join(WORKFLOW_DIR, "rules/annotation.smk")
+include: os.path.join(WORKFLOW_DIR, "rules/amr_mlst.smk")
+include: os.path.join(WORKFLOW_DIR, "rules/report.smk")
+
+
+# Definir objetivo predeterminado
+rule all:
+    input:
+        get_all_inputs(),  # Función definida en common.smk
+
+
+# Regla para validar archivo de muestras
+rule validate_samples:
+    input:
+        samples = lambda wildcards: get_abs_path(config["samples"])
+    output:
+        validated = os.path.join(OUTDIR, "samples_info_validated.csv")
+    log:
+        os.path.join(LOGDIR, "validate_samples.log")
+    conda:
+        os.path.join(ENVS_DIR, "epibac_qc.yml")
+    shell:
+        """
+        # Ejecutamos el script de validación
+        python {SCRIPTS_DIR}/validate_samples_file.py \
+            --samples {input.samples} \
+            --config {workflow.basedir}/../config.yaml \
+            --output {output.validated} \
+            > {log} 2>&1
+        """

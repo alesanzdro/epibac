@@ -1,0 +1,157 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+type: object
+
+properties:
+  samples:
+    type: string
+    description: "Ruta al fichero de muestras"
+  outdir:
+    type: string
+    description: "Directorio de resultados"
+  logdir:
+    type: string
+    description: "Directorio de logs"
+  refdir:
+    type: string
+    description: "Directorio de recursos y bases de datos"
+  # CONFIGURACIÓN DEL PIPELINE
+  mode:
+    type: string
+    enum: ["gva", "normal"]
+    description: "Modo de análisis EPIBAC"
+  run_name:
+    type: string
+    description: "Nombre de la carrera"
+  mode_config:
+    type: object
+    properties:
+      gva:
+        type: object
+        properties:
+          primary_id_column:
+            type: string
+            enum: ["id", "id2"]
+            default: "id2"
+            description: "Identificador primario para modo GVA"
+          storage_cabinet:
+            type: string
+            description: "Directorio de almacenamiento para la Cabina GVA"
+      normal:
+        type: object
+        properties:
+          primary_id_column:
+            type: string
+            enum: ["id"]
+            default: "id"
+            description: "Identificador primario para modo normal"
+
+  skip:
+    type: object
+    description: "Opciones para omitir partes específicas del pipeline"
+    properties:
+      prokka:
+        type: boolean
+        description: "Si es true, omite la instalación de bases de datos y ejecución de Prokka"
+    additionalProperties: false
+    default: {}
+
+  params:
+    type: object
+    properties:
+      nanopore:
+        type: object
+        properties:
+          dorado_model:
+            type: string
+            enum: ["dna_r10.4.1_e8.2_400bps_hac@v4.2.0", "dna_r10.4.1_e8.2_400bps_sup@v4.2.0", "dna_r9.4.1_450bps_hac@v3.3", "dna_r9.4.1_450bps_sup@v3.3"]
+            description: "Modelo de Dorado para muestras Nanopore"
+      
+      min_reads:
+        type: integer
+      fastp:
+        type: object
+        properties:
+          extra: {type: string}
+        required: [extra]
+      unicycler:
+        type: object
+        properties:
+          extra: {type: string}
+        required: [extra]
+      resfinder:
+        type: object
+        properties:
+          extra: {type: string}
+        required: [extra]
+      kraken2:
+        type: object
+        properties:
+          db_url:
+            type: string
+            pattern: "^(https?|ftp)://[^\\s/$.?#].[^\\s]*$"
+            description: "URL para descargar la base de datos de Kraken2"
+        required: [db_url]
+    
+    required: [min_reads, fastp, unicycler, resfinder, kraken2]
+    
+    # Validar que run_name siga el formato AAMMDD_HOSPXXX en modo GVA
+    allOf:
+      - if:
+          properties:
+            mode:
+              const: "gva"
+          required: ["mode"]
+        then:
+          properties:
+            run_name:
+              pattern: "^[0-9]{6}_[A-Z]{4}[0-9]{3}$"
+              description: "En modo GVA, run_name debe seguir el formato AAMMDD_HOSPXXX"
+          required: ["run_name"]
+      - if:
+          properties:
+            mode:
+              const: "gva"
+          required: ["mode"]
+        then:
+          properties:
+            mode_config:
+              properties:
+                gva:
+                  required: ["primary_id_column"]
+          required: ["mode_config"]
+  
+  resources:
+    type: object
+    patternProperties:
+      "^[a-zA-Z0-9_]+$":
+        type: object
+        properties:
+          threads: {type: integer}
+          mem: {type: integer}
+          walltime: {type: integer}
+        required: [threads, walltime]
+    additionalProperties: false
+
+  species:
+    type: object
+    patternProperties:
+      "^[a-z_]+$":
+        type: object
+        properties:
+          genome_size:
+            type: integer
+          refseq:
+            type: string
+        required: [genome_size, refseq]
+    additionalProperties: true
+
+required:
+  - mode
+  - samples
+  - outdir
+  - logdir
+  - refdir
+  - run_name
+  - params
+  - resources
+  - species

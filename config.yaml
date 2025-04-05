@@ -1,10 +1,18 @@
+################################################################################
+#                        EPIBAC - Configuración general                        #
+#                                                                              #
+# Este archivo contiene la configuración global del pipeline EPIBAC.           #
+# Los valores se pueden sobrescribir en la línea de comandos con --config      #
+################################################################################
+
+
 #==============================
 # CONFIGURACIÓN GENERAL
 #==============================
 # Archivos y carpetas principales
-samples: "test/samples_info-gva.csv"
-outdir: "test/output"
-logdir: "test/logs"
+samples: "data/250319_ALIC001/samplesinfo_250319_ALIC001.csv "
+outdir: "output/250319_ALIC001"
+logdir: "logs/250319_ALIC00"
 refdir: "resources"
 
 #==============================
