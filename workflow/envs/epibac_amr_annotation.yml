@@ -1,0 +1,20 @@
+name: epibac_amr_annotation
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Anotación
+  - prokka=1.14.6
+  - perl-xml-simple
+  - perl-list-moreutils
+  # Plásmidos
+  - plasmidfinder=2.1.6
+  - platon=1.7
+  - mob_suite=3.1.9 # Replicones plasmídicos
+  # Tipificación (MLST, etc.)
+  - mlst=2.23.0
+  - sistr_cmd=1.1.1  # para Salmonella
+  # Resistencia / virulencia
+  - abricate=1.0.1
+  - staramr=0.11.0

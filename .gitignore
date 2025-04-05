@@ -1,24 +1,37 @@
+# Ignorar todo por defecto
 *
-.snakemake
-.conda
-.DS_Store
-!.gitignore
-!authors.md
+.*
+
+# No ignorar directorios principales (necesario para que funcionen las reglas de subdirectorios)
+!data/
+!workflow/
+!output/
+!resources/
+!logs/
+
+# No ignorar archivos específicos en la raíz
+!epibac.py
 !config.yaml
-!dag.png
-!envs  
-!envs/*
-!LICENSE  
-!README.md  
-!report.html  
-!rules
-!rules/*
-!scripts
-!scripts/*
-!Snakefile
-!test
-!test/*
-!test/raw_data
-!test/raw_data/*
-!schemas  
-!schemas/*
+!LICENSE
+!README.md
+!.gitignore
+!CHANGELOG.md
+!CONTRIBUTING.md
+
+# Ignorar contenidos de directorios específicos
+output/*
+logs/*
+resources/*
+
+# Permitir archivos .gitkeep
+!output/.gitkeep
+!logs/.gitkeep
+!resources/.gitkeep
+
+# Permitir datos de ejemplo
+!data/250319_ALIC001/
+!data/250319_ALIC001/**/*.fastq.gz
+
+# No ignorar nada en workflow
+!workflow/
+!workflow/**

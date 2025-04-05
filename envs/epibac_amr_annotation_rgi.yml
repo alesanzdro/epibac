@@ -1,8 +1,0 @@
-name: epibac_amr_annotation_rgi
-channels:
-  - conda-forge
-  - bioconda
-  - defaults
-dependencies:
-  # Resistencia / virulencia
-  - rgi=6.0.3
