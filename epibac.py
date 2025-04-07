@@ -615,8 +615,10 @@ def main():
     )
     
     # Comando: clean
-    clean_parser = subparsers.add_parser("clean", help="Limpiar archivos temporales")
-    # [resto de argumentos de clean...]
+    # Parser para el subcomando 'clean'
+    clean_parser = subparsers.add_parser("clean", help="Eliminar archivos temporales y logs")
+    clean_parser.add_argument("--all", action="store_true", help="Eliminar también bases de datos instaladas")
+    clean_parser.add_argument("--logs", action="store_true", help="Eliminar solo archivos de log")
     
     # Comando: samplesinfo
     samplesinfo_parser = subparsers.add_parser(
