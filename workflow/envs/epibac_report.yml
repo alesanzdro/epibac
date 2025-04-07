@@ -8,6 +8,7 @@ dependencies:
   - dash
   - matplotlib
   - seaborn
+  - pyyaml 
   - dash-bio
   - xlsxwriter
   - pip

@@ -4,10 +4,13 @@ channels:
   - bioconda
   - defaults
 dependencies:
+  # Configuración Perl
+  - perl>=5.22.0
+  - perl-app-cpanminus
   # Anotación
   - prokka=1.14.6
   - perl-xml-simple
-  - perl-list-moreutils
+  - perl-list-moreutils>=0.428
   # Plásmidos
   - plasmidfinder=2.1.6
   - platon=1.7

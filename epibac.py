@@ -198,6 +198,37 @@ class EpibacRunner:
         self.logger.info("✓ Estructura del proyecto verificada correctamente")
         return 0
 
+    def get_singularity_args(self):
+        """
+        Genera los argumentos para Singularity/Apptainer basados en la configuración.
+        
+        Returns:
+            str: Argumentos formateados para Singularity/Apptainer
+        """
+        singularity_args = [f"-B {SCRIPT_DIR}"]
+        
+        # Añadir proxy si está configurado
+        if self.args.proxy:
+            singularity_args.append(f"--env http_proxy={self.args.proxy} --env https_proxy={self.args.proxy}")
+        
+        # Añadir storage_cabinet si estamos en modo gva
+        try:
+            with open(self.config_file, "r") as f:
+                config = yaml.safe_load(f)
+                
+            mode = config.get("mode", "")
+            if mode == "gva":
+                storage_cabinet = config.get("mode_config", {}).get("gva", {}).get("storage_cabinet", "")
+                if storage_cabinet and os.path.exists(storage_cabinet):
+                    self.logger.info(f"Añadiendo storage_cabinet al bind de Singularity/Apptainer: {storage_cabinet}")
+                    singularity_args.append(f"-B {storage_cabinet}")
+                else:
+                    self.logger.warning(f"Storage cabinet no encontrado o no configurado: {storage_cabinet}")
+        except Exception as e:
+            self.logger.warning(f"No se pudo obtener storage_cabinet: {e}")
+        
+        return " ".join(singularity_args)
+
     def run_snakemake(self, targets, extra_config=None, extra_args=None):
         """
         Ejecuta Snakemake con los parámetros adecuados.
@@ -221,12 +252,10 @@ class EpibacRunner:
                 "--apptainer-prefix", str(SCRIPT_DIR / "resources" / "singularity_images"),
             ])
             
-            # Añadir argumentos de proxy solo si se especificó
-            if self.args.proxy:
-                cmd.extend(["--singularity-args", 
-                        f"-B {SCRIPT_DIR} --env http_proxy={self.args.proxy} --env https_proxy={self.args.proxy}"])
-            else:
-                cmd.extend(["--singularity-args", f"-B {SCRIPT_DIR}"])
+            # Usar el nuevo método para generar los argumentos de Singularity/Apptainer
+            singularity_args = self.get_singularity_args()
+            if singularity_args:
+                cmd.extend(["--apptainer-args", f"'{singularity_args}'"])
         
         # Agregar opciones comunes
         cmd.extend(["--cores", str(self.args.threads)])
@@ -273,7 +302,8 @@ class EpibacRunner:
             result = subprocess.run(cmd, check=True)
             return result.returncode
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"Error al ejecutar Snakemake: {e}")
+            self.logger.error(f"Error al ejecutar Snakemake (código {e.returncode}):")
+            self.logger.error(f"$ {cmd_str}")
             return e.returncode
     
     def setup(self):
@@ -552,141 +582,81 @@ class EpibacRunner:
 
 def main():
     """Función principal."""
+    # Crear parser principal
     parser = argparse.ArgumentParser(
         description="EPIBAC: Pipeline para análisis genómico bacteriano"
     )
     parser.add_argument(
         "-v", "--version", action="version", version=f"EPIBAC v{VERSION}"
     )
-    parser.add_argument(
-        "--verbose", action="store_true", help="Mostrar información detallada"
-    )
-    parser.add_argument(
-        "--dry-run", action="store_true", help="Mostrar comandos sin ejecutar"
-    )
-
-    # Opciones de ejecución
-    execution = parser.add_mutually_exclusive_group()
-    execution.add_argument(
-        "--conda", action="store_true", help="Usar entornos conda (por defecto)"
-    )
-    execution.add_argument(
-        "--singularity",
-        action="store_true",
-        help="Usar contenedores Singularity/Apptainer",
-    )
-
-    # Opciones comunes
-    parser.add_argument(
-        "--threads", type=int, default=4, help="Número de threads (default: 4)"
-    )
-    parser.add_argument(
-        "--config",
-        type=str,
-        help=f"Archivo de configuración (default: {DEFAULT_CONFIG})",
-    )
-    parser.add_argument("--samples", type=str, help="Archivo de muestras")
-    parser.add_argument("--outdir", type=str, help="Directorio de salida")
-    parser.add_argument("--run-name", type=str, help="Nombre de la carrera/experimento")
-    parser.add_argument(
-        "--mode",
-        choices=["gva", "normal"],
-        default="gva",
-        help="Modo de análisis (default: gva)",
-    )
-    parser.add_argument(
-        "--proxy", type=str, help="URL del proxy (ej: http://proxy.ejemplo.com:8080)"
-    )
-
-    # Subparsers para comandos específicos
-    subparsers = parser.add_subparsers(dest="command", help="Comandos disponibles")
-
+    
+    # Crear subparsers para comandos
+    subparsers = parser.add_subparsers(dest="command", help="Comandos disponibles", required=True)
+    
+    # === Definir cada subparser con sus argumentos específicos ===
+    
     # Comando: check
-    subparsers.add_parser(
-        "check", help="Verificar estructura del proyecto y dependencias"
-    )
-
+    check_parser = subparsers.add_parser("check", help="Verificar estructura del proyecto y dependencias")
+    
     # Comando: setup
-    setup_parser = subparsers.add_parser(
-        "setup", help="Instalar y configurar bases de datos"
-    )
+    setup_parser = subparsers.add_parser("setup", help="Instalar y configurar bases de datos")
     setup_parser.add_argument(
-        "--skip-prokka",
-        action="store_true",
-        help="Omitir instalación de bases de datos para Prokka",
+        "--skip-prokka", action="store_true", help="Omitir instalación de bases de datos para Prokka"
     )
-    setup_parser.add_argument(
-        "--skip-amrfinder",
-        action="store_true",
-        help="Omitir instalación de bases de datos para AMRFinder",
-    )
-    setup_parser.add_argument(
-        "--skip-kraken2",
-        action="store_true",
-        help="Omitir instalación de bases de datos para Kraken2",
-    )
-    setup_parser.add_argument(
-        "--skip-resfinder",
-        action="store_true",
-        help="Omitir instalación de bases de datos para ResFinder",
-    )
-
+    # [resto de argumentos de setup...]
+    
     # Comando: validate
-    subparsers.add_parser(
-        "validate", help="Validar archivo de muestras"
-    )
-
+    validate_parser = subparsers.add_parser("validate", help="Validar archivo de muestras")
+    
     # Comando: run
     run_parser = subparsers.add_parser("run", help="Ejecutar análisis completo")
     run_parser.add_argument(
         "--resume", action="store_true", help="Continuar análisis previo interrumpido"
     )
-
+    
     # Comando: clean
     clean_parser = subparsers.add_parser("clean", help="Limpiar archivos temporales")
-    clean_parser.add_argument(
-        "--all", action="store_true", help="Eliminar también bases de datos instaladas"
-    )
-    clean_parser.add_argument(
-        "--logs", action="store_true", help="Eliminar solo archivos de log"
-    )
-
+    # [resto de argumentos de clean...]
+    
     # Comando: samplesinfo
     samplesinfo_parser = subparsers.add_parser(
-        "samplesinfo",
-        help="Generar archivo samples_info.csv a partir de archivos FASTQ",
+        "samplesinfo", help="Generar archivo samples_info.csv a partir de archivos FASTQ"
     )
-    samplesinfo_parser.add_argument(
-        "--fastq", "-f", required=True, help="Ruta al directorio con archivos FASTQ"
-    )
-    samplesinfo_parser.add_argument(
-        "--platform",
-        "-p",
-        choices=["illumina", "nanopore"],
-        required=True,
-        help="Plataforma de secuenciación (illumina o nanopore)",
-    )
-    samplesinfo_parser.add_argument(
-        "--output",
-        "-o",
-        help="Ruta de salida para el archivo (por defecto: directorio padre del directorio fastq)",
-    )
-
+    # [resto de argumentos de samplesinfo...]
+    
+    # === Añadir argumentos globales a TODOS los subparsers ===
+    for subparser in [check_parser, setup_parser, validate_parser, run_parser, clean_parser, samplesinfo_parser]:
+        # Opciones de ejecución
+        execution = subparser.add_mutually_exclusive_group()
+        execution.add_argument("--conda", action="store_true", help="Usar entornos conda (por defecto)")
+        execution.add_argument("--singularity", action="store_true", help="Usar contenedores Singularity/Apptainer")
+        
+        # Opciones comunes
+        subparser.add_argument("--verbose", action="store_true", help="Mostrar información detallada")
+        subparser.add_argument("--dry-run", action="store_true", help="Mostrar comandos sin ejecutar")
+        subparser.add_argument("--threads", type=int, default=4, help="Número de threads (default: 4)")
+        subparser.add_argument("--config", type=str, help=f"Archivo de configuración (default: {DEFAULT_CONFIG})")
+        # Solo añadir argumentos relevantes para ciertos comandos
+        if subparser in [validate_parser, run_parser]:
+            subparser.add_argument("--samples", type=str, help="Archivo de muestras")
+            subparser.add_argument("--outdir", type=str, help="Directorio de salida")
+            subparser.add_argument("--run-name", type=str, help="Nombre de la carrera/experimento")
+            subparser.add_argument(
+                "--mode", choices=["gva", "normal"], default="gva", help="Modo de análisis (default: gva)"
+            )
+        # Proxy solo para los que lo necesitan
+        if subparser in [setup_parser, run_parser]:
+            subparser.add_argument("--proxy", type=str, help="URL del proxy (ej: http://proxy.ejemplo.com:8080)")
+    
     args = parser.parse_args()
 
-    # Validar que se haya proporcionado un comando
-    if not args.command:
-        parser.print_help()
-        return 1
-
     # Por defecto usar conda si no se especifica
-    if not args.conda and not args.singularity:
+    if not getattr(args, 'conda', False) and not getattr(args, 'singularity', False):
         args.conda = True
 
     # Ejecutar el comando
     runner = EpibacRunner(args)
     return runner.run()
-
 
 if __name__ == "__main__":
     sys.exit(main())

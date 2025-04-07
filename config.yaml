@@ -27,8 +27,8 @@ run_name: "240512_CLIN002"
 # Configuraciones específicas por modo
 mode_config:
   gva:
-    primary_id_column: "id2"
-    storage_cabinet: "/home/asanzc/CabinaCS/NLSAR"
+    primary_id_column: "id"
+    storage_cabinet: "/home/asanzc/CabinaCS/NLSAR/deposit"
   normal:
     primary_id_column: "id"
 
