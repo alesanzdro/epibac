@@ -77,27 +77,27 @@ rule epibac_summary_gestlab:
         df_merged["CARRERA"] = TAG_RUN
         # Renombramos columnas
         rename_map_gva = {
-            "PETICION": "id",
-                "CODIGO_MUESTRA_ORIGEN": "id2",
-                "FECHA_TOMA_MUESTRA": "collection_date",
-                "ESPECIE_SECUENCIA": "organism",
-                "MOTIVO_WGS": "relevance",
-                "ILLUMINA_R1": "illumina_r1",
-                "ILLUMINA_R2": "illumina_r2",
-                "NANOPORE": "nanopore",
-                "ID_WS": "Scheme_mlst",
-                "ST_WGS": "ST",
-                "MLST_WGS": "MLST",
-                "R_Geno_WGS": "AMR",
-                "PHENO_WGS": "PHENO_resfinder",
-                "V_WGS": "VIRULENCE",
-                "CONFIRMACION": "confirmation_note",
-                "NUM_BROTE": "outbreak_id",
-                "COMENTARIO_WGS": "comment",
-            }
+            "CODIGO_MUESTRA_ORIGEN": "id",
+            "PETICION": "id2",
+            "FECHA_TOMA_MUESTRA": "collection_date",
+            "ESPECIE_SECUENCIA": "organism",
+            "MOTIVO_WGS": "relevance",
+            "ILLUMINA_R1": "illumina_r1",
+            "ILLUMINA_R2": "illumina_r2",
+            "NANOPORE": "nanopore",
+            "ID_WS": "Scheme_mlst",
+            "ST_WGS": "ST",
+            "MLST_WGS": "MLST",
+            "R_Geno_WGS": "AMR",
+            "PHENO_WGS": "PHENO_resfinder",
+            "V_WGS": "VIRULENCE",
+            "CONFIRMACION": "confirmation_note",
+            "NUM_BROTE": "outbreak_id",
+            "COMENTARIO_WGS": "comment",
+        }
 
         df_merged.rename(
-                columns={v: k for k, v in rename_map_gva.items()}, inplace=True
+            columns={v: k for k, v in rename_map_gva.items()}, inplace=True
         )
 
         # Añadir columnas extra
@@ -107,7 +107,6 @@ rule epibac_summary_gestlab:
 
         # Asignar las columnas adicionales del modo GVA si existen
         # Si NUM_BROTE ya está en df_meta, se mantendrá en df_merged
-
 
         # Determinar el tipo de secuenciación (ILLUMINA, NANOPORE o HYBRID)
         def determine_seq_method(row):
@@ -123,81 +122,57 @@ rule epibac_summary_gestlab:
             else:
                 return pd.NA
 
-                # Añadir columna de método de secuenciación
-
-
+        # Añadir columna de método de secuenciación
         df_merged["OBS_MET_WGS"] = df_merged.apply(determine_seq_method, axis=1)
 
         # Simplificamos columnas de nombres de ficheros
-        for col in ["ILLUMINA_R1", "ILLUMINA_R2", "NANOPORE"]:
-            if col in df_merged.columns:
-                df_merged[col] = df_merged[col].apply(
-                    lambda x: os.path.basename(x) if pd.notna(x) and x != "" else x
-                )
+        #for col in ["ILLUMINA_R1", "ILLUMINA_R2", "NANOPORE"]:
+        #    if col in df_merged.columns:
+        #        df_merged[col] = df_merged[col].apply(
+        #            lambda x: os.path.basename(x) if pd.notna(x) and x != "" else x
+        #        )
 
-                # Generar FICHERO_LECTURAS_WGS
-
-
+        # Generar FICHERO_LECTURAS_WGS
         def build_path(row):
             if pd.isna(row["CARRERA"]):
                 return pd.NA
-
+            
             parts = row["CARRERA"].split("_")
             if len(parts) < 2:
                 return pd.NA
-
-                # Obtener los parámetros específicos del modo GVA
-
+            
+            # Obtener los parámetros específicos del modo GVA
             storage_cabinet = (
                 config.get("mode_config", {})
                 .get("gva", {})
-                .get("storage_cabinet", "\\\\NLSAR\\deposito")
+                .get("storage_cabinet", "/home/asanzc/CABINAX/CabinaCS/NLSAR/deposit")
             )
             hosp = parts[1][:4]  # Primeros 4 caracteres del segundo segmento
+            
+            # Para simplificar, usamos la plataforma primaria para la ruta mostrada
+            platform = "illumina" if row["OBS_MET_WGS"] in ["ILLUMINA", "HYBRID"] else "nanopore"
+            
+            # Construir ruta de destino base - usar forward slash (/) para Linux
+            base_path = f"{storage_cabinet}/CVA_{hosp}/{platform}/{row['CARRERA']}/fastq"
+            
+            # Añadir el nombre del archivo si existe - CORREGIDO
+            if platform == "illumina" and pd.notna(row["ILLUMINA_R1"]) and row["ILLUMINA_R1"]:
+                # Usar solo el nombre del archivo, no la ruta completa
+                filename = os.path.basename(row["ILLUMINA_R1"])
+                return f"{base_path}/{filename}"
+            elif platform == "nanopore" and pd.notna(row["NANOPORE"]) and row["NANOPORE"]:
+                # Usar solo el nombre del archivo, no la ruta completa
+                filename = os.path.basename(row["NANOPORE"])
+                return f"{base_path}/{filename}"
+            else:
+                return base_path
+                
 
-            # Determinar plataforma según el método de secuenciación
-            seq_method = row["OBS_MET_WGS"]
-            platform = "illumina"  # Por defecto
+        # Generar rutas de destino según el tipo de secuenciación
+        df_merged["FICHERO_LECTURAS_WGS"] = df_merged.apply(build_path, axis=1)
 
-            if seq_method == "NANOPORE":
-                platform = "nanopore"
-                # Para HYBRID, usamos illumina como primario pero guardaremos ambas rutas
-
-                # Construir ruta de destino
-            return f"{storage_cabinet}\\CVA_{hosp}\\{platform}\\{row['CARRERA']}"
-
-            # Generar rutas de destino según el tipo de secuenciación
-
-
-        df_merged["FICHEROS_LECTURAS_WGS"] = df_merged.apply(build_path, axis=1)
-
-        # Para secuencias híbridas, necesitamos ambas rutas
-        df_paths = pd.DataFrame(index=df_merged.index)
-        df_paths["sample_id"] = df_merged[merge_col]
-        df_paths["carrera"] = df_merged["CARRERA"]
-        df_paths["seq_method"] = df_merged["OBS_MET_WGS"]
-        df_paths["dest_path_illumina"] = df_merged.apply(
-            lambda row: (
-                build_path(row)
-                if row["OBS_MET_WGS"] in ["ILLUMINA", "HYBRID"]
-                else pd.NA
-            ),
-            axis=1,
-        )
-        df_paths["dest_path_nanopore"] = df_merged.apply(
-            lambda row: (
-                f"{config.get('mode_config',{}).get('gva',{}).get('storage_cabinet', '\\\\NLSAR\\deposito')}\\CVA_{row['CARRERA'].split('_')[1][:4]}\\nanopore\\{row['CARRERA']}"
-                if row["OBS_MET_WGS"] in ["NANOPORE", "HYBRID"]
-                else pd.NA
-            ),
-            axis=1,
-        )
-
-        # Guardar información de rutas para posible uso en un script de copia
-        paths_file = os.path.join(
-            os.path.dirname(output.gestlab_report), f"{DATE}_paths_for_copy.csv"
-        )
-        df_paths.to_csv(paths_file, sep=";", index=False)
+        # Guardar
+        df_merged.to_csv(output.gestlab_report, sep=";", index=False)
 
         # Guardar
         df_merged.to_csv(output.gestlab_report, sep=";", index=False)
@@ -212,6 +187,8 @@ rule copy_sequencing_files:
         copy_log=f"{OUTDIR}/report/{TAG_RUN}_file_copy_log.txt",
     log:
         f"{LOGDIR}/report/copy_sequencing_files.log",
+    params:
+        config_file=lambda _, input: workflow.configfiles[0] if workflow.configfiles else "config.yaml"
     conda:
         "../envs/epibac_report.yml"
     threads: 1
@@ -220,12 +197,13 @@ rule copy_sequencing_files:
         walltime=480,
     shell:
         """
-        python scripts/copy_gva_files.py \
+        python {workflow.basedir}/scripts/copy_gva_files.py \
             {input.gestlab_report} \
             {input.report_tsv} \
             {input.report_xlsx} \
             {output.copy_log} \
             {OUTDIR} \
             {TAG_RUN} \
+            --config-file {params.config_file} \
             2> {log}
         """
