@@ -287,6 +287,9 @@ class EpibacRunner:
         if hasattr(self.args, 'outdir') and self.args.outdir:
             outdir_path = os.path.abspath(self.args.outdir)
             config_args.append(f"outdir={outdir_path}")
+            # Añadir automáticamente el logdir basado en outdir
+            logdir_path = os.path.join(outdir_path, "logs")
+            config_args.append(f"logdir={logdir_path}")
         if hasattr(self.args, 'run_name') and self.args.run_name:
             config_args.append(f"run_name={self.args.run_name}")
         if hasattr(self.args, 'mode') and self.args.mode:
@@ -394,13 +397,15 @@ class EpibacRunner:
         
         # Guardar archivo validado si no hay errores fatales
         if result["status"] < 3 and self.args.outdir and result["validated_df"] is not None:
-            outfile = os.path.join(self.args.outdir, "samples_info_validated.csv")
-            report_file = os.path.join(self.args.outdir, "samples_validation_report.txt")
+            # Crear subdirectorio logs/samplesinfo
+            logs_dir = os.path.join(self.args.outdir, "logs", "samplesinfo")
+            os.makedirs(logs_dir, exist_ok=True)
+            
+            # Nuevas rutas de archivos
+            outfile = os.path.join(logs_dir, "samplesinfo_validated.csv")
+            report_file = os.path.join(logs_dir, "samplesvalidation_report.txt")
             
             try:
-                # Crear directorio si no existe
-                os.makedirs(os.path.dirname(os.path.abspath(outfile)), exist_ok=True)
-                
                 # Guardar archivo validado
                 result["validated_df"].to_csv(outfile, index=False, sep=result["separator"])
                 self.logger.info(f"Archivo validado guardado en: {outfile}")

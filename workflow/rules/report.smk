@@ -36,7 +36,7 @@ rule epibac_summary:
 
 rule epibac_summary_gestlab:
     input:
-        validated_samples_info=f"{OUTDIR}/samples_info_validated.csv",
+        validated_samples_info=f"{LOGDIR}/samplesinfo/samplesinfo_validated.csv",
         results=f"{OUTDIR}/report/{TAG_RUN}_EPIBAC.tsv",
     output:
         gestlab_report=f"{OUTDIR}/report/{TAG_RUN}_EPIBAC_GESTLAB.csv",

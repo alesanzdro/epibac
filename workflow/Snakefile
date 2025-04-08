@@ -35,7 +35,7 @@ else:
 if "logdir" in config:
     LOGDIR = get_abs_path(config["logdir"])
 else:
-    LOGDIR = os.path.join(PROJECT_DIR, "logs")
+    LOGDIR = os.path.join(OUTDIR, "logs")  # Ahora dentro de OUTDIR por defecto
 
 # Establecer directorio de recursos/bases de datos
 if "refdir" in config:
@@ -77,15 +77,6 @@ os.makedirs(OUTDIR, exist_ok=True)
 os.makedirs(LOGDIR, exist_ok=True)
 os.makedirs(os.path.join(DB_DIR, "log"), exist_ok=True)
 
-# Validar configuración con esquema (comentado para diagnóstico)
-# from snakemake.utils import validate
-# try:
-#     validate(config, os.path.join(WORKFLOW_DIR, "schemas/config.schema.yaml"))
-# except Exception as e:
-#     print(f"Error validando configuración: {e}", file=sys.stderr)
-#     sys.exit(1)
-
-
 # Cargar reglas modulares
 include: os.path.join(WORKFLOW_DIR, "rules/common.smk")
 include: os.path.join(WORKFLOW_DIR, "rules/setup.smk")
@@ -95,29 +86,7 @@ include: os.path.join(WORKFLOW_DIR, "rules/annotation.smk")
 include: os.path.join(WORKFLOW_DIR, "rules/amr_mlst.smk")
 include: os.path.join(WORKFLOW_DIR, "rules/report.smk")
 
-
 # Definir objetivo predeterminado
 rule all:
     input:
         get_all_inputs(),  # Función definida en common.smk
-
-
-# Regla para validar archivo de muestras
-rule validate_samples:
-    input:
-        samples = lambda wildcards: get_abs_path(config["samples"])
-    output:
-        validated = os.path.join(OUTDIR, "samples_info_validated.csv")
-    log:
-        os.path.join(LOGDIR, "validate_samples.log")
-    conda:
-        os.path.join(ENVS_DIR, "epibac_qc.yml")
-    shell:
-        """
-        # Ejecutamos el script de validación
-        python {SCRIPTS_DIR}/validate_samples_file.py \
-            --samples {input.samples} \
-            --config {workflow.basedir}/../config.yaml \
-            --output {output.validated} \
-            > {log} 2>&1
-        """

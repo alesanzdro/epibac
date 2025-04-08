@@ -114,7 +114,7 @@ def get_samples_safe():
     Returns:
         DataFrame: DataFrame con información de las muestras o vacío si no existe.
     """
-    samples_csv = f"{OUTDIR}/samples_info_validated.csv"
+    samples_csv = f"{LOGDIR}/samplesinfo/samplesinfo_validated.csv"
     if os.path.exists(samples_csv):
         use_column = config.get("primary_id_column", "id")
         return pd.read_csv(samples_csv, sep=";", dtype=str).set_index(
@@ -134,7 +134,7 @@ def get_samples():
     Raises:
         FileNotFoundError: Si el archivo de muestras validadas no existe.
     """
-    samples_csv = f"{OUTDIR}/samples_info_validated.csv"
+    samples_csv = f"{LOGDIR}/samplesinfo/samplesinfo_validated.csv"
     if os.path.exists(samples_csv):
         use_column = config.get("primary_id_column", "id")
         return pd.read_csv(samples_csv, sep=";", dtype=str).set_index(
@@ -153,7 +153,7 @@ def get_sample_index_if_exists():
     Returns:
         list: Lista de IDs o lista vacía si el archivo no existe.
     """
-    samples_csv = f"{OUTDIR}/samples_info_validated.csv"
+    samples_csv = f"{LOGDIR}/samplesinfo/samplesinfo_validated.csv"
     if os.path.exists(samples_csv):
         use_column = config.get("primary_id_column", "id")
         df = pd.read_csv(samples_csv, sep=";", dtype=str)
@@ -242,7 +242,7 @@ def get_all_inputs():
         list: Lista de archivos esperados por la regla all.
     """
     inputs = [
-        f"{OUTDIR}/samples_info_validated.csv",
+        f"{LOGDIR}/samplesinfo/samplesinfo_validated.csv",
         f"{OUTDIR}/qc/multiqc.html",
         f"{OUTDIR}/report/{TAG_RUN}_EPIBAC.tsv",
         f"{OUTDIR}/report/{TAG_RUN}_EPIBAC.xlsx",
