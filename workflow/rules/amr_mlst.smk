@@ -106,29 +106,26 @@ rule epibac_mlst:
         name=lambda wc: f"{wc.sample}",
     shell:
         """
-
         # Fix perl paths al inicio de la ejecución
-        # Verificar si estamos en Singularity o si el directorio es escribible
         if [ ! -z "$CONDA_PREFIX" ]; then
             # Siempre exportar PATH para esta ejecución
             export PATH=$CONDA_PREFIX/bin:$PATH
             
-            # Solo intentar modificar archivos si NO estamos en Singularity
-            # y el directorio es escribible
-            if [ -z "$SINGULARITY_CONTAINER" ] && [ -w "$CONDA_PREFIX" ]; then
+            # Intentar corregir shebang solo si parece seguro
+            if [ -w "$CONDA_PREFIX/bin" ] 2>/dev/null; then
                 # Crear directorio si no existe
-                mkdir -p $CONDA_PREFIX/etc/conda/activate.d || true
+                mkdir -p $CONDA_PREFIX/etc/conda/activate.d 2>/dev/null || true
         
                 # Crear script de activación para perl
-                echo 'export PATH=$CONDA_PREFIX/bin:$PATH' > $CONDA_PREFIX/etc/conda/activate.d/export_perl.sh
-                chmod +x $CONDA_PREFIX/etc/conda/activate.d/export_perl.sh
+                echo 'export PATH=$CONDA_PREFIX/bin:$PATH' > $CONDA_PREFIX/etc/conda/activate.d/export_perl.sh 2>/dev/null || true
+                chmod +x $CONDA_PREFIX/etc/conda/activate.d/export_perl.sh 2>/dev/null || true
         
                 # Corregir shebang de script mlst si es necesario
                 if [ -f $CONDA_PREFIX/bin/mlst ]; then
                     perl_path=$(which perl)
                     first_line=$(head -n 1 $CONDA_PREFIX/bin/mlst)
                     if [[ "$first_line" != "#!$perl_path"* ]]; then
-                        sed -i "1s|^#!.*perl.*|#!$perl_path|" $CONDA_PREFIX/bin/mlst || true
+                        sed -i "1s|^#!.*perl.*|#!$perl_path|" $CONDA_PREFIX/bin/mlst 2>/dev/null || true
                     fi
                 fi
             fi

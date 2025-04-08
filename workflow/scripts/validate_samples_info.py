@@ -79,7 +79,7 @@ def validate_samples(samples_file, schema_file, config_file, report_file, output
     # Verificar columnas según el modo
     if mode == "gva":
         # Columnas obligatorias para GVA
-        required_columns = ["PETICION", "CODIGO_MUESTRA_ORIGEN", "ILLUMINA_R1", "ILLUMINA_R2", "NANOPORE"]
+        required_columns = ["CODIGO_MUESTRA_ORIGEN", "ILLUMINA_R1", "ILLUMINA_R2", "NANOPORE"]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             fatal_errors.append(f"Error: Columnas obligatorias faltantes para modo GVA: {', '.join(missing_columns)}")
@@ -87,7 +87,7 @@ def validate_samples(samples_file, schema_file, config_file, report_file, output
             return STATUS_FATAL
         
         # Columnas importantes pero no absolutamente obligatorias
-        important_columns = ["FECHA_TOMA_MUESTRA", "ESPECIE_SECUENCIA", "MOTIVO_WGS"]
+        important_columns = ["PETICION", "FECHA_TOMA_MUESTRA", "ESPECIE_SECUENCIA", "MOTIVO_WGS"]
         missing_important = [col for col in important_columns if col not in df.columns]
         if missing_important:
             errors.append(f"Error: Columnas importantes faltantes: {', '.join(missing_important)}")
