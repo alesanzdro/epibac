@@ -203,13 +203,19 @@ class EpibacRunner:
         Genera los argumentos para Singularity/Apptainer basados en la configuración.
         
         Returns:
-            str: Argumentos formateados para Singularity/Apptainer
+            lista: Lista de argumentos formateados para Singularity/Apptainer
         """
-        singularity_args = [f"-B {SCRIPT_DIR}"]
+        # Inicializar lista de argumentos
+        bind_args = []
+        env_args = []
+        
+        # Añadir directorio del script
+        bind_args.append(f"{SCRIPT_DIR}")
         
         # Añadir proxy si está configurado
         if self.args.proxy:
-            singularity_args.append(f"--env http_proxy={self.args.proxy} --env https_proxy={self.args.proxy}")
+            env_args.append(f"http_proxy={self.args.proxy}")
+            env_args.append(f"https_proxy={self.args.proxy}")
         
         # Añadir storage_cabinet si estamos en modo gva
         try:
@@ -221,13 +227,24 @@ class EpibacRunner:
                 storage_cabinet = config.get("mode_config", {}).get("gva", {}).get("storage_cabinet", "")
                 if storage_cabinet and os.path.exists(storage_cabinet):
                     self.logger.info(f"Añadiendo storage_cabinet al bind de Singularity/Apptainer: {storage_cabinet}")
-                    singularity_args.append(f"-B {storage_cabinet}")
+                    bind_args.append(f"{storage_cabinet}")
                 else:
                     self.logger.warning(f"Storage cabinet no encontrado o no configurado: {storage_cabinet}")
         except Exception as e:
             self.logger.warning(f"No se pudo obtener storage_cabinet: {e}")
         
-        return " ".join(singularity_args)
+        # Construir las opciones de Singularity
+        singularity_args = []
+        
+        # Añadir opciones de bind
+        for bind in bind_args:
+            singularity_args.extend(["-B", bind])
+        
+        # Añadir variables de entorno
+        for env in env_args:
+            singularity_args.extend(["--env", env])
+        
+        return singularity_args
 
     def run_snakemake(self, targets, extra_config=None, extra_args=None):
         """
@@ -255,23 +272,24 @@ class EpibacRunner:
             # Usar el nuevo método para generar los argumentos de Singularity/Apptainer
             singularity_args = self.get_singularity_args()
             if singularity_args:
-                cmd.extend(["--apptainer-args", f"'{singularity_args}'"])
+                cmd.extend(["--apptainer-args", " ".join(singularity_args)])
         
-        # Agregar opciones comunes
+        # Agregar opciones comunes - usar threads en lugar de cores para consistencia
         cmd.extend(["--cores", str(self.args.threads)])
         cmd.extend(["--configfile", str(self.config_file)])
         
-        # Agregar configuración adicional
+        # Agregar configuración adicional - solo si los atributos existen
         config_args = []
-        if self.args.samples:
+        # Solo acceder a estos atributos si existen (para setup no son necesarios)
+        if hasattr(self.args, 'samples') and self.args.samples:
             samples_path = os.path.abspath(self.args.samples)
             config_args.append(f"samples={samples_path}")
-        if self.args.outdir:
+        if hasattr(self.args, 'outdir') and self.args.outdir:
             outdir_path = os.path.abspath(self.args.outdir)
             config_args.append(f"outdir={outdir_path}")
-        if self.args.run_name:
+        if hasattr(self.args, 'run_name') and self.args.run_name:
             config_args.append(f"run_name={self.args.run_name}")
-        if self.args.mode:
+        if hasattr(self.args, 'mode') and self.args.mode:
             config_args.append(f"mode={self.args.mode}")
         if extra_config:
             config_args.extend(extra_config)
@@ -294,7 +312,7 @@ class EpibacRunner:
         # Log y ejecutar
         cmd_str = " ".join(cmd)
         self.logger.debug(f"Ejecutando: {cmd_str}")
-        if self.args.dry_run:
+        if hasattr(self.args, 'dry_run') and self.args.dry_run:
             self.logger.info(f"[DRY RUN] Comando: {cmd_str}")
             return 0
         
@@ -317,19 +335,26 @@ class EpibacRunner:
 
         # Determinar qué bases de datos instalar
         targets = []
-        if not self.args.skip_prokka:
+        
+        # Verificar si cada atributo existe y usarlo solo si existe
+        skip_prokka = hasattr(self.args, 'skip_prokka') and self.args.skip_prokka
+        skip_amrfinder = hasattr(self.args, 'skip_amrfinder') and self.args.skip_amrfinder
+        skip_kraken2 = hasattr(self.args, 'skip_kraken2') and self.args.skip_kraken2
+        skip_resfinder = hasattr(self.args, 'skip_resfinder') and self.args.skip_resfinder
+        
+        if not skip_prokka:
             targets.append("setup_prokka_database")
-        if not self.args.skip_amrfinder:
+        if not skip_amrfinder:
             targets.append("setup_amrfinder_database")
-        if not self.args.skip_kraken2:
+        if not skip_kraken2:
             targets.append("setup_kraken2_database")
-        if not self.args.skip_resfinder:
+        if not skip_resfinder:
             targets.append("setup_resfinder_database")
 
         if not targets:
             self.logger.warning("No se seleccionó ninguna base de datos para instalar")
             return 0
-
+        
         return self.run_snakemake(targets, extra_args=["--rerun-incomplete"])
 
     def validate(self):
@@ -492,7 +517,7 @@ class EpibacRunner:
         """
         # Verificar parámetros requeridos
         if not self.args.run_name:
-            self.logger.error("Debe especificar el nombre de la carrera con --run-name")
+            self.logger.error("Debe especificar el nombre de la carrera con --run_name")
             return 1
 
         if not self.args.platform:
@@ -539,7 +564,7 @@ class EpibacRunner:
             str(build_script),
             "--mode",
             self.args.mode,
-            "--run-name",
+            "--run_name",
             self.args.run_name,
             "--platform",
             self.args.platform,
@@ -565,14 +590,20 @@ class EpibacRunner:
                     else os.path.dirname(os.path.abspath(self.args.fastq))
                 )
                 output_file = os.path.join(
-                    output_dir, f"samples_info_{self.args.run_name}.csv"
+                    output_dir, f"samplesinfo_{self.args.run_name}.csv"
                 )
                 self.logger.info(
                     f"El archivo se ha generado correctamente en: {output_file}"
                 )
-                self.logger.info("Ahora puedes ejecutar:")
+                self.logger.info("IMPORTANTE: Antes de ejecutar el análisis debe:")
+                self.logger.info("1. Editar el archivo y completar los campos PETICION, FECHA_TOMA_MUESTRA, ESPECIE_SECUENCIA y MOTIVO_WGS")
+                self.logger.info("2. Validar el archivo modificado con:")
                 self.logger.info(
-                    f"  epibac.py run --samples {output_file} --outdir results --run-name {self.args.run_name}"
+                    f"./epibac.py validate --samples {output_file} --outdir output/{self.args.run_name} --run_name {self.args.run_name} --mode {self.args.mode}"
+                )
+                self.logger.info("3. Si la validación es exitosa, ejecutar el análisis con:")
+                self.logger.info(
+                    f"./epibac.py run --samples {output_file} --outdir output/{self.args.run_name}  --run_name {self.args.run_name} --mode {self.args.mode}"
                 )
             return result.returncode
         except subprocess.CalledProcessError as e:
@@ -599,11 +630,12 @@ def main():
     check_parser = subparsers.add_parser("check", help="Verificar estructura del proyecto y dependencias")
     
     # Comando: setup
-    setup_parser = subparsers.add_parser("setup", help="Instalar y configurar bases de datos")
-    setup_parser.add_argument(
-        "--skip-prokka", action="store_true", help="Omitir instalación de bases de datos para Prokka"
-    )
-    # [resto de argumentos de setup...]
+    # En la sección donde se define el parser para el subcomando 'setup'
+    setup_parser = subparsers.add_parser("setup", help="Configurar el entorno y descargar bases de datos")
+    setup_parser.add_argument("--skip-prokka", action="store_true", help="Omitir instalación de bases de datos para Prokka")
+    setup_parser.add_argument("--skip-amrfinder", action="store_true", help="Omitir instalación de bases de datos para AMRFinder")
+    setup_parser.add_argument("--skip-kraken2", action="store_true", help="Omitir instalación de bases de datos para Kraken2")
+    setup_parser.add_argument("--skip-resfinder", action="store_true", help="Omitir instalación de bases de datos para ResFinder")
     
     # Comando: validate
     validate_parser = subparsers.add_parser("validate", help="Validar archivo de muestras")
@@ -615,14 +647,25 @@ def main():
     )
     
     # Comando: clean
-    clean_parser = subparsers.add_parser("clean", help="Limpiar archivos temporales")
-    # [resto de argumentos de clean...]
+    # Parser para el subcomando 'clean'
+    clean_parser = subparsers.add_parser("clean", help="Eliminar archivos temporales y logs")
+    clean_parser.add_argument("--all", action="store_true", help="Eliminar también bases de datos instaladas")
+    clean_parser.add_argument("--logs", action="store_true", help="Eliminar solo archivos de log")
     
     # Comando: samplesinfo
     samplesinfo_parser = subparsers.add_parser(
         "samplesinfo", help="Generar archivo samples_info.csv a partir de archivos FASTQ"
     )
-    # [resto de argumentos de samplesinfo...]
+    samplesinfo_parser.add_argument("--run_name", type=str, required=True, 
+                                help="Nombre de la carrera/experimento")
+    samplesinfo_parser.add_argument("--platform", type=str, required=True, choices=["illumina", "nanopore"],
+                                help="Plataforma de secuenciación (illumina o nanopore)")
+    samplesinfo_parser.add_argument("--fastq", type=str, required=True,
+                                help="Directorio que contiene los archivos FASTQ")
+    samplesinfo_parser.add_argument("--output", type=str,
+                                help="Directorio de salida para el archivo generado")
+    samplesinfo_parser.add_argument("--mode", choices=["gva", "normal"], default="gva",
+                                help="Modo de análisis (default: gva)")
     
     # === Añadir argumentos globales a TODOS los subparsers ===
     for subparser in [check_parser, setup_parser, validate_parser, run_parser, clean_parser, samplesinfo_parser]:
@@ -640,7 +683,7 @@ def main():
         if subparser in [validate_parser, run_parser]:
             subparser.add_argument("--samples", type=str, help="Archivo de muestras")
             subparser.add_argument("--outdir", type=str, help="Directorio de salida")
-            subparser.add_argument("--run-name", type=str, help="Nombre de la carrera/experimento")
+            subparser.add_argument("--run_name", type=str, help="Nombre de la carrera/experimento")
             subparser.add_argument(
                 "--mode", choices=["gva", "normal"], default="gva", help="Modo de análisis (default: gva)"
             )
