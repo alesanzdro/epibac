@@ -204,7 +204,7 @@ def create_samplesinfo(args):
 
             else:  # modo normal
                 # Cabecera modo normal
-                f.write("id;collection_date;organism;illumina_r1;illumina_r2;ont\n")
+                f.write("id;collection_date;organism;illumina_r1;illumina_r2;nanopore\n")
 
                 # Datos de las muestras
                 for sample_id, reads in samples.items():
@@ -231,7 +231,7 @@ def create_samplesinfo(args):
 
             else:  # modo normal
                 # Cabecera modo normal
-                f.write("id;collection_date;organism;illumina_r1;illumina_r2;ont\n")
+                f.write("id;collection_date;organism;illumina_r1;illumina_r2;nanopore\n")
 
                 # Datos de las muestras
                 for sample_id, fastq_path in sample_files.items():

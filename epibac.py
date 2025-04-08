@@ -517,7 +517,7 @@ class EpibacRunner:
         """
         # Verificar parámetros requeridos
         if not self.args.run_name:
-            self.logger.error("Debe especificar el nombre de la carrera con --run-name")
+            self.logger.error("Debe especificar el nombre de la carrera con --run_name")
             return 1
 
         if not self.args.platform:
@@ -564,7 +564,7 @@ class EpibacRunner:
             str(build_script),
             "--mode",
             self.args.mode,
-            "--run-name",
+            "--run_name",
             self.args.run_name,
             "--platform",
             self.args.platform,
@@ -590,14 +590,20 @@ class EpibacRunner:
                     else os.path.dirname(os.path.abspath(self.args.fastq))
                 )
                 output_file = os.path.join(
-                    output_dir, f"samples_info_{self.args.run_name}.csv"
+                    output_dir, f"samplesinfo_{self.args.run_name}.csv"
                 )
                 self.logger.info(
                     f"El archivo se ha generado correctamente en: {output_file}"
                 )
-                self.logger.info("Ahora puedes ejecutar:")
+                self.logger.info("IMPORTANTE: Antes de ejecutar el análisis debe:")
+                self.logger.info("1. Editar el archivo y completar los campos PETICION, FECHA_TOMA_MUESTRA, ESPECIE_SECUENCIA y MOTIVO_WGS")
+                self.logger.info("2. Validar el archivo modificado con:")
                 self.logger.info(
-                    f"  epibac.py run --samples {output_file} --outdir results --run-name {self.args.run_name}"
+                    f"./epibac.py validate --samples {output_file} --outdir output/{self.args.run_name} --run_name {self.args.run_name} --mode {self.args.mode}"
+                )
+                self.logger.info("3. Si la validación es exitosa, ejecutar el análisis con:")
+                self.logger.info(
+                    f"./epibac.py run --samples {output_file} --outdir output/{self.args.run_name}  --run_name {self.args.run_name} --mode {self.args.mode}"
                 )
             return result.returncode
         except subprocess.CalledProcessError as e:
@@ -650,7 +656,16 @@ def main():
     samplesinfo_parser = subparsers.add_parser(
         "samplesinfo", help="Generar archivo samples_info.csv a partir de archivos FASTQ"
     )
-    # [resto de argumentos de samplesinfo...]
+    samplesinfo_parser.add_argument("--run_name", type=str, required=True, 
+                                help="Nombre de la carrera/experimento")
+    samplesinfo_parser.add_argument("--platform", type=str, required=True, choices=["illumina", "nanopore"],
+                                help="Plataforma de secuenciación (illumina o nanopore)")
+    samplesinfo_parser.add_argument("--fastq", type=str, required=True,
+                                help="Directorio que contiene los archivos FASTQ")
+    samplesinfo_parser.add_argument("--output", type=str,
+                                help="Directorio de salida para el archivo generado")
+    samplesinfo_parser.add_argument("--mode", choices=["gva", "normal"], default="gva",
+                                help="Modo de análisis (default: gva)")
     
     # === Añadir argumentos globales a TODOS los subparsers ===
     for subparser in [check_parser, setup_parser, validate_parser, run_parser, clean_parser, samplesinfo_parser]:
@@ -668,7 +683,7 @@ def main():
         if subparser in [validate_parser, run_parser]:
             subparser.add_argument("--samples", type=str, help="Archivo de muestras")
             subparser.add_argument("--outdir", type=str, help="Directorio de salida")
-            subparser.add_argument("--run-name", type=str, help="Nombre de la carrera/experimento")
+            subparser.add_argument("--run_name", type=str, help="Nombre de la carrera/experimento")
             subparser.add_argument(
                 "--mode", choices=["gva", "normal"], default="gva", help="Modo de análisis (default: gva)"
             )
