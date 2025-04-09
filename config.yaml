@@ -18,9 +18,12 @@ refdir: "resources"
 # CONFIGURACIÓN DEL PIPELINE
 #==============================
 
-# Opciones de omisión
+# Omitir instalación / ejecución de programas
 skip:
-  prokka: true  # Cambiar a true para omitir Prokka
+  prokka: true   # Por defecto no se ejecuta prokka
+  amrfinder: false
+  kraken2: false
+  resfinder: false
 
 # Modo de funcionamiento
 mode: "gva"  # Puede ser "normal" o "gva"

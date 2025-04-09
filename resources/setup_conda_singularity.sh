@@ -2,762 +2,788 @@
 #
 # setup_env.sh
 #
-# Script multifunción para:
-#   - Desinstalar e instalar Singularity v3.8.7 (opción 'singularity').
-#   - Desinstalar COMPLETAMENTE cualquier instalación de conda/Miniconda/Anaconda
-#     y reinstalar la última versión de Miniconda + configuración básica (opción 'conda').
+# Multifunction script to:
+#   - Uninstall and install Singularity v3.8.7 (option 'singularity').
+#   - COMPLETELY Uninstall any conda/Miniconda/Anaconda installation
+#     and reinstall the latest version of Miniconda + basic configuration (option 'conda').
 #
-# Uso:
+# Usage:
 #   1) sudo ./setup_env.sh singularity
 #   2) sudo ./setup_env.sh conda
 #   3) sudo ./setup_env.sh conda http://proxy.ejemplo.com:8080
 #
-# ¡ATENCIÓN!: En el modo "conda" se borran todos los entornos y la instalación de conda.
-#             Haz copia de seguridad si es necesario.
+# WARNING!: In "conda" mode, all environments and the conda installation are deleted.
+#             Make a backup if necessary.
 #
-# Probado en sistemas tipo Debian/Ubuntu con 'apt'.
+# Tested on Debian/Ubuntu-like systems with 'apt'.
+# -----------------------------------------------------------------------------
+# Reformatted the script using: shfmt -i 4 -ci -w setup_conda_singularity.sh
 # -----------------------------------------------------------------------------
 
-# Definición de colores y formatos
+# Color and format definitions
 COLOR_RESET="\033[0m"
 BOLD="\033[1m"
-PREGUNTA="${BOLD}\033[33m"  # Dorado/amarillo en negrita
-INFO="${BOLD}\033[90m"      # Gris en negrita
-ERROR="${BOLD}\033[31m"     # Rojo en negrita
-PELIGRO="${BOLD}\033[31m"     # Rojo en negrita
-ADVERTENCIA="${BOLD}\033[38;5;208m"  # Naranja en negrita (requiere soporte de 256 colores)
-SUGERENCIA="${BOLD}\033[38;5;208m"  # Naranja en negrita (requiere soporte de 256 colores
-OK="${BOLD}\033[32m"     # Verde en negrita
-FIN="${BOLD}\033[32m"     # Verde en negrita
+QUESTION="${BOLD}\033[33m"      # Bold golden/yellow
+INFO="${BOLD}\033[90m"          # Bold gray
+ERROR="${BOLD}\033[31m"         # Bold red
+DANGER="${BOLD}\033[31m"        # Bold red
+WARNING="${BOLD}\033[38;5;208m" # Bold orange (requires 256-color support)
+TIP="${BOLD}\033[38;5;208m"     # Bold orange (requires 256-color support)
+OK="${BOLD}\033[32m"            # Bold green
+END="${BOLD}\033[32m"           # Bold green
 
-# Función para usar en echo con colores
+# Function to use in echo with colors
 format_message() {
-  local prefix="$1"
-  local message="$2"
-  local color="$3"
-  
-  echo -e "${color}[${prefix}]${COLOR_RESET} ${message}"
+    local prefix="$1"
+    local message="$2"
+    local color="$3"
+
+    echo -e "${color}[${prefix}]${COLOR_RESET} ${message}"
 }
 
 set -euo pipefail
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
-  echo "Uso: $0 {singularity|conda} [proxy_url]"
-  echo "Ejemplos:"
-  echo "  $0 singularity"
-  echo "  $0 conda"
-  echo "  $0 conda http://proxy.san.gva.es:8080"
-  exit 1
+    echo "Usage: $0 {singularity|conda} [proxy_url]"
+    echo "Examples:"
+    echo "  $0 singularity"
+    echo "  $0 conda"
+    echo "  $0 conda http://proxy.san.gva.es:8080"
+    exit 1
 fi
 
 MODE="$1"
 PROXY_URL=""
 
-# Si hay un segundo parámetro, asumimos que es el proxy
+# If there is a second parameter, we assume it is the proxy
 if [[ $# -eq 2 ]]; then
-  PROXY_URL="$2"
-  format_message "INFO" "Se configurará proxy: $PROXY_URL" "$INFO"
+    PROXY_URL="$2"
+    format_message "INFO" "Proxy will be configured: $PROXY_URL" "$INFO"
 fi
 
-# Detectar el usuario que llama a sudo para editar sus ficheros .bashrc, .zshrc
+# Detect the user calling sudo to edit their .bashrc, .zshrc files
 REAL_USER="${SUDO_USER:-root}"
 REAL_USER_HOME="$(eval echo ~"$REAL_USER")"
 
 echo -e "${BOLD}======================================${COLOR_RESET}"
-echo -e "${BOLD} Script setup_env.sh - Opción: $MODE ${COLOR_RESET}"
-echo -e "${BOLD} Usuario real:       $REAL_USER${COLOR_RESET}"
-echo -e "${BOLD} Directorio HOME:    $REAL_USER_HOME${COLOR_RESET}"
+echo -e "${BOLD} Script setup_env.sh - Option: $MODE ${COLOR_RESET}"
+echo -e "${BOLD} Real User:       $REAL_USER${COLOR_RESET}"
+echo -e "${BOLD} HOME Directory:    $REAL_USER_HOME${COLOR_RESET}"
 echo -e "${BOLD}======================================${COLOR_RESET}"
 
-# Función para hacer preguntas con validación de respuestas
+# Function to ask questions with answer validation
 ask_question() {
-  local prompt="$1"   # Mensaje de la pregunta
-  local default="$2"  # Valor por defecto (S o N)
+    local prompt="$1"  # Question message
+    local default="$2" # Default value (Y or N)
 
-  while true; do
-    # Colorear la pregunta
-    read -rp "$(echo -e "${PREGUNTA}[PREGUNTA]${COLOR_RESET} $prompt")" answer
-    
-    # Si está vacía, usar el valor por defecto
-    if [[ -z "$answer" ]]; then
-      answer="$default"
-    fi
-    
-    # Normalizar respuesta a minúsculas
-    answer=$(echo "$answer" | tr '[:upper:]' '[:lower:]')
-    
-    case "$answer" in
-      s|y|si|yes) return 0 ;;  # Éxito = Sí
-      n|no) return 1 ;;        # Fallo = No
-      q|quit|exit) 
-        format_message "INFO" "Saliendo del script por petición del usuario." "$INFO"
-        exit 0 
-        ;;
-      *) format_message "INFO" "Por favor responde (s)í, (n)o o (q) para salir." "$INFO" ;;
-    esac
-  done
+    while true; do
+        # Color the question
+        read -rp "$(echo -e "${QUESTION}[QUESTION]${COLOR_RESET} $prompt")" answer
+
+        # If it's empty, use the default value
+        if [[ -z "$answer" ]]; then
+            answer="$default"
+        fi
+
+        # Normalize answer to lowercase
+        answer=$(echo "$answer" | tr '[:upper:]' '[:lower:]')
+
+        case "$answer" in
+            y | s | si | yes) return 0 ;; # Success = Yes
+            n | no) return 1 ;;           # Failure = No
+            q | quit | exit)
+                format_message "INFO" "Exiting script by user request." "$INFO"
+                exit 0
+                ;;
+            *) format_message "INFO" "Please answer (y)es, (n)o or (q) to quit." "$INFO" ;;
+        esac
+    done
 }
 
-# Función auxiliar para ejecutar comandos conda como el usuario real
+# Auxiliary function to execute conda commands as the real user
 run_as_user_with_conda() {
-  local cmd="$1"
-  sudo -u "$REAL_USER" /bin/bash -c "source $REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh && $cmd"
+    local cmd="$1"
+    sudo -u "$REAL_USER" /bin/bash -c "source $REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh && $cmd"
 }
 
 ###############################
-# FUNCIONES: DESINSTALACIÓN   #
+# FUNCTIONS: UNINSTALLATION   #
 ###############################
 
-# ----- Verificar espacio en disco -----
+# ----- Check disk space -----
 check_disk_space() {
-  local required_space_mb=5000  # ~5GB para la instalación completa
-  local available_space_mb=$(df -m /usr/local | awk 'NR==2 {print $4}')
-  
-  format_message "INFO" "Espacio disponible: ${available_space_mb}MB, requerido: ${required_space_mb}MB" "$INFO"
-  
-  if [[ $available_space_mb -lt $required_space_mb ]]; then
-    format_message "ERROR" "Espacio insuficiente en disco. Se necesitan al menos ${required_space_mb}MB" "$ERROR"
-    return 1
-  fi
-  
-  return 0
+    local required_space_mb=30000 # ~5GB for the complete installation
+    local available_space_mb=$(df -m /usr/local | awk 'NR==2 {print $4}')
+
+    format_message "INFO" "Available space: ${available_space_mb}MB, required for complete BASE installation: ${required_space_mb}MB" "$INFO"
+
+    if [[ $available_space_mb -lt $required_space_mb ]]; then
+        format_message "ERROR" "Insufficient disk space. At least ${required_space_mb}MB are needed" "$ERROR"
+        return 1
+    fi
+
+    return 0
 }
 
-# Usar la función antes de la instalación
+# Use the function before installation
 echo
 if ! check_disk_space; then
-  read -rp "$(echo -e "${PREGUNTA}[PREGUNTA]${COLOR_RESET} ¿Continuar a pesar de la advertencia de espacio? (s/N): ")" ans
-  case "$ans" in
-    [sS]|[sS][iI]) format_message "INFO" "Continuando con espacio limitado..." "$INFO" ;;
-    *) format_message "INFO" "Instalación cancelada." "$INFO" && exit 1 ;;
-  esac
+    if ask_question "Continue despite the space warning? (y/N): " "n"; then
+        format_message "INFO" "Continuing with limited space..." "$INFO"
+    else
+        format_message "INFO" "Installation cancelled." "$INFO"
+        exit 1
+    fi
 fi
 
-# ----- Desinstalar Go -----
+# ----- Uninstall Go -----
 remove_go() {
-  echo
-  format_message "INFO" "Eliminando Go..." "$INFO"
-
-  # 1. Quitar paquetes de apt
-  format_message "INFO" "Buscando paquetes 'golang-go', 'golang-*' en apt..." "$INFO"
-  GO_PKGS="$(dpkg -l | grep -E 'golang-go|golang-[0-9\.]+|golang-doc' || true)"
-  if [[ -n "$GO_PKGS" ]]; then
-    format_message "INFO" "Se encontraron paquetes de Go instalados:" "$INFO"
-    echo "$GO_PKGS"
-    format_message "INFO" "Procediendo a desinstalarlos..." "$INFO"
-    apt remove --purge -y golang-go golang-doc || true
-    apt autoremove --purge -y || true
-  else
-    format_message "INFO" "No hay paquetes de Go instalados con apt (o no se han encontrado)." "$INFO"
-  fi
-
-  # 2. Borrar /usr/local/go si existe (instalaciones manuales)
-  if [[ -d /usr/local/go ]]; then
-    format_message "INFO" "Eliminando /usr/local/go..." "$INFO"
-    rm -rf /usr/local/go
-  fi
-
-  # 3. Eliminar directorio ~/go (GOPATH) si el usuario desea
-  if [[ -d "$REAL_USER_HOME/go" ]]; then
     echo
-    if ask_question " ¿Eliminar también la carpeta '$REAL_USER_HOME/go' (GOPATH)? (s/N): " "n"; then
-      rm -rf "$REAL_USER_HOME/go"
-      format_message "OK" "Se eliminó $REAL_USER_HOME/go." "$OK"
+    format_message "INFO" "Removing Go..." "$INFO"
+
+    # 1. Remove apt packages
+    format_message "INFO" "Searching for packages 'golang-go', 'golang-*' in apt..." "$INFO"
+    GO_PKGS="$(dpkg -l | grep -E 'golang-go|golang-[0-9\.]+|golang-doc' || true)"
+    if [[ -n "$GO_PKGS" ]]; then
+        format_message "INFO" "Go packages found installed:" "$INFO"
+        echo "$GO_PKGS"
+        format_message "INFO" "Proceeding to uninstall them..." "$INFO"
+        apt remove --purge -y golang-go golang-doc || true
+        apt autoremove --purge -y || true
     else
-      format_message "INFO" "Se mantiene $REAL_USER_HOME/go." "$INFO"
+        format_message "INFO" "No Go packages installed with apt (or not found)." "$INFO"
     fi
-  fi
 
-  # 4. Eliminar exportaciones en .bashrc y .zshrc
-  echo
-  format_message "INFO" "Limpiando referencias a Go en .bashrc / .zshrc del usuario $REAL_USER..." "$INFO"
-
-  for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"
-  do
-    [[ -f "$SHELL_RC" ]] || continue
-    # Backup
-    cp "$SHELL_RC" "$SHELL_RC.bak_$(date +%Y%m%d%H%M%S)"
-    
-    # Usar múltiples patrones simples en lugar de uno complejo
-    sed -i '/usr\/local\/go\/bin/d' "$SHELL_RC"
-    sed -i '/GOROOT/d' "$SHELL_RC"
-    sed -i '/GOPATH/d' "$SHELL_RC"
-  done
-
-  format_message "INFO" "Referencias a Go eliminadas de los archivos de configuración del shell." "$INFO"
-  format_message "INFO" "(Reinicia o abre una nueva shell para que surta efecto)." "$INFO"
-}
-
-# ----- Instalar Go (v1.24.1) -----
-install_go() {
-  echo
-  format_message "INFO" "Instalando Go 1.24.1..."
-
-  # Asegurarnos de tener wget
-  apt-get update -y
-  apt-get install -y wget
-
-  # Creamos un directorio de trabajo temporal
-  WORK_DIR="/tmp/go-install.$$"
-  mkdir -p "$WORK_DIR"
-  cd "$WORK_DIR"
-
-  # Descargar Go con verificación de integridad
-  format_message "INFO" "Descargando Go 1.24.1..." "$INFO"
-  wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
-
-  # Verificación SHA256 (opcional pero recomendado)
-  # Puedes obtener el valor actual desde https://go.dev/dl/
-  EXPECTED_SHA256="cb2396bae64183cdccf81a9a6df0aea3bce9511fc21469fb89a0c00470088073"
-  ACTUAL_SHA256=$(sha256sum go1.24.1.linux-amd64.tar.gz | cut -d' ' -f1)
-  if [[ "$EXPECTED_SHA256" != "$ACTUAL_SHA256" ]]; then
-    format_message "ERROR" "Verificación de integridad fallida para go1.24.1.linux-amd64.tar.gz" "$ERROR"
-    exit 1
-  fi
-
-  # Extraer en /usr/local
-  format_message "INFO" "Extrayendo Go en /usr/local..." "$INFO"
-  rm -rf /usr/local/go
-  tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
-
-  # Añadir PATH y GOPATH a la shell del usuario
-  format_message "INFO" "Configurando variables de entorno para Go..." "$INFO"
-  for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"
-  do
-    [[ -f "$SHELL_RC" ]] || continue
-    # Backup antes de modificar
-    cp "$SHELL_RC" "$SHELL_RC.bak_$(date +%Y%m%d%H%M%S)"
-    
-    # Añadir las líneas de configuración
-    {
-      echo -e "\n# Configuración de Go (añadido por setup_env.sh)"
-      echo "export GOPATH=\${HOME}/go"
-      echo "export PATH=/usr/local/go/bin:\${PATH}:\${GOPATH}/bin"
-    } >> "$SHELL_RC"
-  done
-
-  # Verificar la instalación
-  export PATH=/usr/local/go/bin:$PATH
-  if command -v go &>/dev/null; then
-    format_message "OK" "Go 1.24.1 instalado correctamente:" "$OK"
-    go version
-  else
-    format_message "ERROR" "No se pudo verificar la instalación de Go" "$ERROR"
-  fi
-
-  # Limpieza
-  cd /
-  rm -rf "$WORK_DIR"
-}
-
-# ----- Desinstalar Singularity -----
-remove_singularity() {
-  echo
-  format_message "INFO" "Procediendo a eliminar Singularity..." "$INFO"
-
-  # Mostrar la versión actual si está disponible
-  if command -v singularity &>/dev/null; then
-    CURRENT_VERSION=$(singularity --version 2>/dev/null || echo "Versión desconocida")
-    format_message "INFO" "Versión detectada: $CURRENT_VERSION" "$INFO"
-  fi
-
-  # 1. Quitar paquetes singulares de apt (búsqueda más específica)
-  format_message "INFO" "Buscando paquetes 'singularity' en apt..." "$INFO"
-  SING_PKGS="$(dpkg -l | grep -E 'singularity|apptainer' || true)"
-  if [[ -n "$SING_PKGS" ]]; then
-    format_message "INFO" "Se encontraron paquetes instalados:" "$INFO"
-    echo "$SING_PKGS"
-    format_message "INFO" "Desinstalando con apt..." "$INFO"
-    apt remove --purge -y singularity-container apptainer || true
-    apt autoremove --purge -y || true
-  else
-    format_message "INFO" "No hay paquetes 'singularity' instalados con apt." "$INFO"
-  fi
-
-  # 2. Eliminar binarios locales
-  for BIN in singularity apptainer; do
-    if command -v $BIN &>/dev/null; then
-      BIN_PATH="$(which $BIN)"
-      format_message "INFO" "Eliminando binario $BIN_PATH..." "$INFO"
-      rm -f "$BIN_PATH"
+    # 2. Delete /usr/local/go if it exists (manual installations)
+    if [[ -d /usr/local/go ]]; then
+        format_message "INFO" "Deleting /usr/local/go..." "$INFO"
+        rm -rf /usr/local/go
     fi
-  done
 
-  # 3. Eliminar directorios de configuración y librerías
-  for DIR in /usr/local/libexec/singularity /usr/local/etc/singularity \
-             /usr/local/libexec/apptainer /usr/local/etc/apptainer; do
-    if [[ -d "$DIR" ]]; then
-      format_message "INFO" "Eliminando $DIR..." "$INFO"
-      rm -rf "$DIR"
-    fi
-  done
-
-  format_message "INFO" "Singularity ha sido eliminado (o no se encontraba)." "$INFO"
-}
-# ----- Desinstalar COMPLETAMENTE conda/Miniconda/Anaconda -----
-remove_conda() {
-  echo
-  echo -e "${BOLD}\033[38;5;208m!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  echo -e "${BOLD} ADVERTENCIA: Se eliminarán TODOS los entornos conda,       \033[38;5;208m"
-  echo -e "${BOLD} la instalación de Miniconda/Anaconda y las referencias en  \033[38;5;208m"
-  echo -e "${BOLD} .bashrc / .zshrc.                                          \033[38;5;208m"
-  echo -e "${BOLD}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!${COLOR_RESET}"
-  echo
-  read -rp "$(echo -e "${PREGUNTA}[PREGUNTA]${COLOR_RESET} ¿Realmente deseas borrar TODAS las instalaciones de conda? (s/N): ")" ans
-  case "$ans" in
-    [sS]|[sS][iI])
-      format_message "INFO" "Procediendo a eliminación total de conda..." "$INFO"
-
-      # 1. Intentar desactivar conda (por si está activa)
-      #    Evita algunos bloqueos, pero puede no ser esencial.
-      if command -v conda &>/dev/null; then
-        conda deactivate || true
-      fi
-
-      # 2. Eliminar directorios típicos de conda/Anaconda/Miniconda
-      #    (Hay gente que lo instala en ~/anaconda3 o ~/miniconda3)
-      # Antes de eliminar directorios importantes
-      for cdir in "$REAL_USER_HOME/miniconda3" "$REAL_USER_HOME/anaconda3" "$REAL_USER_HOME/conda" "$REAL_USER_HOME/.conda"; do
-        if [[ -d "$cdir" && "$cdir" != "/" && "$cdir" != "$REAL_USER_HOME" ]]; then
-          format_message "INFO" "Eliminando directorio $cdir..." "$INFO"
-          rm -rf "$cdir"
-        elif [[ -d "$cdir" ]]; then
-          format_message "PELIGRO" "No se eliminará $cdir por seguridad" "$PELIGRO"
+    # 3. Delete ~/go (GOPATH) directory if the user wishes
+    if [[ -d "$REAL_USER_HOME/go" ]]; then
+        echo
+        if ask_question "Also delete the folder '$REAL_USER_HOME/go' (GOPATH)? (y/n): " "n"; then
+            rm -rf "$REAL_USER_HOME/go"
+            format_message "OK" "$REAL_USER_HOME/go was deleted." "$OK"
+        else
+            format_message "INFO" "$REAL_USER_HOME/go is kept." "$INFO"
         fi
-      done
+    fi
 
-      # Eliminar también el archivo .condarc si existe
-      if [[ -f "$REAL_USER_HOME/.condarc" ]]; then
-        format_message "INFO" "Eliminando archivo de configuración $REAL_USER_HOME/.condarc..." "$INFO"
-        # Crear backup primero
-        cp "$REAL_USER_HOME/.condarc" "$REAL_USER_HOME/.condarc.bak_$(date +%Y%m%d%H%M%S)"
-        rm -f "$REAL_USER_HOME/.condarc"
-      fi
+    # 4. Remove exports in .bashrc and .zshrc
+    echo
+    format_message "INFO" "Cleaning Go references in .bashrc / .zshrc of user $REAL_USER..." "$INFO"
 
-      # 3. Eliminar líneas en .bashrc / .zshrc que hagan 'conda init' o similar
-      for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"
-      do
+    for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"; do
         [[ -f "$SHELL_RC" ]] || continue
+        # Backup
         cp "$SHELL_RC" "$SHELL_RC.bak_$(date +%Y%m%d%H%M%S)"
-        
-        # Eliminar el bloque completo de inicialización de conda
-        sed -i '/# >>> conda initialize >>>/,/# <<< conda initialize <<</d' "$SHELL_RC"
-        
-        # También eliminar líneas sueltas que contengan referencias a conda por seguridad
-        sed -i '/conda\.sh\|conda activate\|conda init\|\.conda\|anaconda3\|miniconda3/d' "$SHELL_RC"
-        
-        format_message "INFO" "Se ha limpiado el archivo $SHELL_RC de referencias a conda." "$INFO"
-      done
 
-      format_message "INFO" "Se han eliminado referencias a conda de los archivos de configuración." "$INFO"
-      format_message "INFO" "Para que surtan efecto, cierra y vuelve a abrir la terminal (o haz 'source' manual)." "$INFO"
-      ;;
-    *)
-      format_message "INFO" "Se aborta la eliminación de conda." "$INFO"
-      ;;
-  esac
+        # Use multiple simple patterns instead of a complex one
+        sed -i '/usr\/local\/go\/bin/d' "$SHELL_RC"
+        sed -i '/GOROOT/d' "$SHELL_RC"
+        sed -i '/GOPATH/d' "$SHELL_RC"
+    done
+
+    format_message "INFO" "Go references removed from shell configuration files." "$INFO"
+    format_message "INFO" "(Restart or open a new shell for it to take effect)." "$INFO"
+}
+
+# ----- Install Go (v1.24.1) -----
+install_go() {
+    echo
+    format_message "INFO" "Installing Go 1.24.1..." "$INFO"
+
+    # Make sure we have wget
+    apt-get update -y
+    apt-get install -y wget
+
+    # We create a temporary working directory
+    WORK_DIR="/tmp/go-install.$$"
+    mkdir -p "$WORK_DIR"
+    cd "$WORK_DIR"
+
+    # Download Go with integrity verification
+    format_message "INFO" "Downloading Go 1.24.1..." "$INFO"
+    wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
+
+    # SHA256 verification (optional but recommended)
+    # You can get the current value from https://go.dev/dl/
+    EXPECTED_SHA256="cb2396bae64183cdccf81a9a6df0aea3bce9511fc21469fb89a0c00470088073"
+    ACTUAL_SHA256=$(sha256sum go1.24.1.linux-amd64.tar.gz | cut -d' ' -f1)
+    if [[ "$EXPECTED_SHA256" != "$ACTUAL_SHA256" ]]; then
+        format_message "ERROR" "Integrity verification failed for go1.24.1.linux-amd64.tar.gz" "$ERROR"
+        exit 1
+    fi
+
+    # Extract in /usr/local
+    format_message "INFO" "Extracting Go in /usr/local..." "$INFO"
+    rm -rf /usr/local/go
+    tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
+
+    # Add PATH and GOPATH to the user's shell
+    format_message "INFO" "Configuring environment variables for Go..." "$INFO"
+    for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"; do
+        [[ -f "$SHELL_RC" ]] || continue
+        # Backup before modifying
+        cp "$SHELL_RC" "$SHELL_RC.bak_$(date +%Y%m%d%H%M%S)"
+
+        # Add the configuration lines
+        {
+            echo -e "\n# Go configuration (added by setup_env.sh)"
+            echo "export GOPATH=\${HOME}/go"
+            echo "export PATH=/usr/local/go/bin:\${PATH}:\${GOPATH}/bin"
+        } >>"$SHELL_RC"
+    done
+
+    # Verify the installation
+    export PATH=/usr/local/go/bin:$PATH
+    if command -v go &>/dev/null; then
+        format_message "OK" "Go 1.24.1 installed correctly:" "$OK"
+        go version
+    else
+        format_message "ERROR" "Could not verify Go installation" "$ERROR"
+    fi
+
+    # Cleaning
+    cd /
+    rm -rf "$WORK_DIR"
+}
+
+# ----- Uninstall Singularity -----
+remove_singularity() {
+    echo
+    format_message "INFO" "Proceeding to remove Singularity..." "$INFO"
+
+    # Show the current version if available
+    if command -v singularity &>/dev/null; then
+        CURRENT_VERSION=$(singularity --version 2>/dev/null || echo "Unknown version")
+        format_message "INFO" "Detected version: $CURRENT_VERSION" "$INFO"
+    fi
+
+    # 1. Remove singular packages from apt (more specific search)
+    format_message "INFO" "Searching for 'singularity' packages in apt..." "$INFO"
+    SING_PKGS="$(dpkg -l | grep -E 'singularity|apptainer' || true)"
+    if [[ -n "$SING_PKGS" ]]; then
+        format_message "INFO" "Installed packages found:" "$INFO"
+        echo "$SING_PKGS"
+        format_message "INFO" "Uninstalling with apt..." "$INFO"
+        apt remove --purge -y singularity-container apptainer || true
+        apt autoremove --purge -y || true
+    else
+        format_message "INFO" "No 'singularity' packages installed with apt." "$INFO"
+    fi
+
+    # 2. Remove local binaries
+    for BIN in singularity apptainer; do
+        if command -v $BIN &>/dev/null; then
+            BIN_PATH="$(which $BIN)"
+            format_message "INFO" "Deleting binary $BIN_PATH..." "$INFO"
+            rm -f "$BIN_PATH"
+        fi
+    done
+
+    # 3. Remove configuration and library directories
+    for DIR in /usr/local/libexec/singularity /usr/local/etc/singularity \
+        /usr/local/libexec/apptainer /usr/local/etc/apptainer; do
+        if [[ -d "$DIR" ]]; then
+            format_message "INFO" "Deleting $DIR..." "$INFO"
+            rm -rf "$DIR"
+        fi
+    done
+
+    format_message "INFO" "Singularity has been removed (or was not found)." "$INFO"
+}
+# ----- COMPLETELY Uninstall conda/Miniconda/Anaconda -----
+remove_conda() {
+    echo
+    echo -e "${BOLD}\033[38;5;208m!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo -e "${BOLD} WARNING: ALL conda environments will be deleted,       \033[38;5;208m"
+    echo -e "${BOLD} the Miniconda/Anaconda installation and the references in  \033[38;5;208m"
+    echo -e "${BOLD} .bashrc / .zshrc.                                          \033[38;5;208m"
+    echo -e "${BOLD}!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!${COLOR_RESET}"
+    echo
+    if ask_question "Do you really want to delete ALL conda installations? (y/N): " "n"; then
+        format_message "INFO" "Proceeding to total conda removal..." "$INFO"
+
+        # 1. Try to deactivate conda (in case it is active)
+        #    Avoids some locks, but may not be essential.
+        if command -v conda &>/dev/null; then
+            conda deactivate || true
+        fi
+
+        # 2. Delete typical conda/Anaconda/Miniconda directories
+        #    (Some people install it in ~/anaconda3 or ~/miniconda3)
+        # Before deleting important directories
+        for cdir in "$REAL_USER_HOME/miniconda3" "$REAL_USER_HOME/anaconda3" "$REAL_USER_HOME/conda" "$REAL_USER_HOME/.conda"; do
+            if [[ -d "$cdir" && "$cdir" != "/" && "$cdir" != "$REAL_USER_HOME" ]]; then
+                format_message "INFO" "Deleting directory $cdir..." "$INFO"
+                rm -rf "$cdir"
+            elif [[ -d "$cdir" ]]; then
+                format_message "DANGER" "$cdir will not be deleted for security reasons" "$DANGER"
+            fi
+        done
+
+        # Also delete the .condarc file if it exists
+        if [[ -f "$REAL_USER_HOME/.condarc" ]]; then
+            format_message "INFO" "Deleting configuration file $REAL_USER_HOME/.condarc..." "$INFO"
+            # Create backup first
+            cp "$REAL_USER_HOME/.condarc" "$REAL_USER_HOME/.condarc.bak_$(date +%Y%m%d%H%M%S)"
+            rm -f "$REAL_USER_HOME/.condarc"
+        fi
+
+        # 3. Delete lines in .bashrc / .zshrc that do 'conda init' or similar
+        for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"; do
+            [[ -f "$SHELL_RC" ]] || continue
+            cp "$SHELL_RC" "$SHELL_RC.bak_$(date +%Y%m%d%H%M%S)"
+
+            # Delete the complete conda initialization block
+            sed -i '/# >>> conda initialize >>>/,/# <<< conda initialize <<</d' "$SHELL_RC"
+
+            # Also delete loose lines that contain references to conda for security
+            sed -i '/conda\.sh\|conda activate\|conda init\|\.conda\|anaconda3\|miniconda3/d' "$SHELL_RC"
+
+            format_message "INFO" "The file $SHELL_RC has been cleaned of references to conda." "$INFO"
+        done
+
+        format_message "INFO" "References to conda have been removed from the configuration files." "$INFO"
+        format_message "INFO" "For the changes to take effect, close and reopen the terminal (or do a manual 'source')." "$INFO"
+    else
+        format_message "INFO" "Conda removal aborted." "$INFO"
+        return 1 # Importante: devolver un código para que la función que llama sepa que se canceló
+    fi
 }
 
 ###############################
-# FUNCIONES: INSTALACIONES    #
+# FUNCTIONS: INSTALLATIONS    #
 ###############################
 
-# ----- Instalar Singularity (v3.8.7) -----
+# ----- Install Singularity (v3.8.7) -----
 install_singularity() {
-  echo
-  format_message "INFO" "Instalando Singularity v3.8.7..." "$INFO"
+    echo
+    format_message "INFO" "Installing Singularity v3.8.7..." "$INFO"
 
-  # Dependencias
-  apt-get update -y
-  apt-get install -y build-essential libseccomp-dev pkg-config squashfs-tools cryptsetup runc git
+    # Dependencies
+    apt-get update -y
+    apt-get install -y build-essential libseccomp-dev pkg-config squashfs-tools cryptsetup runc git
 
-  # Usar PID para crear un nombre único de directorio temporal
-  WORK_DIR="/tmp/singularity-install.$$"
-  mkdir -p "$WORK_DIR"
-  cd "$WORK_DIR"
+    # Use PID to create a unique temporary directory name
+    WORK_DIR="/tmp/singularity-install.$$"
+    mkdir -p "$WORK_DIR"
+    cd "$WORK_DIR"
 
-  # Clonar y compilar
-  git clone https://github.com/hpcng/singularity.git
-  cd singularity
-  
-  # Verificar que la versión existe antes de hacer checkout
-  SINGULARITY_VERSION="3.8.7"
-  format_message "INFO" "Verificando que v${SINGULARITY_VERSION} existe en el repositorio..." "$INFO"
-  if ! git tag | grep -q "v${SINGULARITY_VERSION}"; then
-    format_message "ERROR" "Versión ${SINGULARITY_VERSION} no encontrada" "$ERROR"
-    exit 1
-  fi
-  
-  git checkout "v${SINGULARITY_VERSION}"
+    # Clone and compile
+    git clone https://github.com/hpcng/singularity.git
+    cd singularity
 
-  ./mconfig
-  make -C ./builddir
-  make -C ./builddir install
+    # Verify that the version exists before checking out
+    SINGULARITY_VERSION="3.8.7"
+    format_message "INFO" "Verifying that v${SINGULARITY_VERSION} exists in the repository..." "$INFO"
+    if ! git tag | grep -q "v${SINGULARITY_VERSION}"; then
+        format_message "ERROR" "Version ${SINGULARITY_VERSION} not found" "$ERROR"
+        exit 1
+    fi
 
-  # Verificar la instalación
-  if command -v singularity &>/dev/null; then
-    format_message "OK" "Singularity v${SINGULARITY_VERSION} instalado correctamente:" "$OK"
-    singularity --version
-  else
-    format_message "ERROR" "No se pudo verificar la instalación de Singularity" "$ERROR"
-  fi
+    git checkout "v${SINGULARITY_VERSION}"
 
-  # Limpieza
-  cd /
-  rm -rf "$WORK_DIR"
+    ./mconfig
+    make -C ./builddir
+    make -C ./builddir install
+
+    # Verify the installation
+    if command -v singularity &>/dev/null; then
+        format_message "OK" "Singularity v${SINGULARITY_VERSION} installed correctly:" "$OK"
+        singularity --version
+    else
+        format_message "ERROR" "Could not verify Singularity installation" "$ERROR"
+    fi
+
+    # Cleaning
+    cd /
+    rm -rf "$WORK_DIR"
 }
 
-# ----- Instalar entorno virtual de Python con Snakemake -----
+# ----- Install virtual Python environment with Snakemake -----
 install_python_venv() {
-  echo
-  format_message "INFO" "Instalando Python 3.12 y creando entorno virtual..." "$INFO"
+    echo
+    format_message "INFO" "Installing Python 3.12 and creating virtual environment..." "$INFO"
 
-  # Instalar Python 3.12 y herramientas necesarias
-  apt-get update -y
-  apt-get install -y python3.12 python3.12-venv python3.12-dev
-  
-  # Crear el directorio para el entorno virtual si no existe
-  ENV_DIR="$REAL_USER_HOME/snake_env"
-  
-  # Crear entorno como usuario real (no como root)
-  sudo -u "$REAL_USER" python3.12 -m venv "$ENV_DIR"
-  
-  # Instalar paquetes dentro del entorno virtual
-  sudo -u "$REAL_USER" bash -c "source $ENV_DIR/bin/activate && \
+    # Install Python 3.12 and necessary tools
+    apt-get update -y
+    apt-get install -y python3.12 python3.12-venv python3.12-dev
+
+    # Create the directory for the virtual environment if it does not exist
+    ENV_DIR="$REAL_USER_HOME/snake_env"
+
+    # Create environment as real user (not as root)
+    sudo -u "$REAL_USER" python3.12 -m venv "$ENV_DIR"
+
+    # Install packages inside the virtual environment
+    sudo -u "$REAL_USER" bash -c "source $ENV_DIR/bin/activate && \
     pip install --upgrade pip && \
     pip install snakemake==9.1.1 snakemake-wrapper-utils==0.7.2 pandas openpyxl gitpython"
-  
-  # Verificar instalación
-  if sudo -u "$REAL_USER" bash -c "source $ENV_DIR/bin/activate && snakemake --version"; then
-    format_message "OK" "Entorno virtual creado correctamente en $ENV_DIR" "$OK"
-  else
-    format_message "ERROR" "Hubo un problema al crear el entorno virtual" "$ERROR"
-    return 1
-  fi
-  echo
-  # Opcional: Añadir un alias al .bashrc para activar fácilmente
-  read -rp "$(echo -e "${PREGUNTA}[PREGUNTA]${COLOR_RESET} ¿Añadir alias 'snake_env' para activar el entorno? (s/N): ")" ans_alias
-  case "$ans_alias" in
-    [sS]|[sS][iI])
-      echo
-      for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"
-      do
-        [[ -f "$SHELL_RC" ]] || continue
-        # Backup antes de modificar
-        cp "$SHELL_RC" "$SHELL_RC.bak_$(date +%Y%m%d%H%M%S)"
-        
-        # Añadir alias
-        echo -e "\n# Alias para activar entorno virtual snake_env (añadido por setup_env.sh)" >> "$SHELL_RC"
-        echo "alias snake_env='source $ENV_DIR/bin/activate'" >> "$SHELL_RC"
-        
-        format_message "INFO" "Alias añadido a $SHELL_RC" "$INFO"
-      done
-      
-      format_message "INFO" "Ahora puedes usar el comando 'snake_env' para activar el entorno" "$INFO"
-      ;;
-    *)
-      format_message "INFO" "No se añadirá alias. Para activar el entorno usa:" "$INFO"
-      echo "       source $ENV_DIR/bin/activate"
-      ;;
-  esac
-  
-  echo
-  format_message "INFO" "También puedes añadir este entorno a VS Code:" "$INFO"
-  echo "  1. Abre VS Code"
-  echo "  2. Presiona Ctrl+Shift+P"
-  echo "  3. Escribe 'Python: Select Interpreter'"
-  echo "  4. Selecciona el entorno en $ENV_DIR/bin/python3.12"
-  
-  return 0
-}
 
-# ----- Instalar Miniconda (py312_25.1.1-2) -----
-install_conda() {
-  echo
-  format_message "INFO" "Instalando la versión py312_25.1.1-2 de Miniconda3 para Linux x86_64..." "$INFO"
-
-  # Asegurarnos de tener wget
-  apt-get update -y
-  apt-get install -y wget
-
-  # Descargamos en home del usuario real (no en /root)
-  cd "$REAL_USER_HOME"
-  sudo -u "$REAL_USER" wget -q https://repo.anaconda.com/miniconda/Miniconda3-py312_25.1.1-2-Linux-x86_64.sh -O miniconda.sh
-
-  # Verificar checksum SHA256
-  EXPECTED_SHA256="4766d85b5f7d235ce250e998ebb5a8a8210cbd4f2b0fea4d2177b3ed9ea87884"
-  ACTUAL_SHA256=$(sha256sum miniconda.sh | cut -d' ' -f1)
-  if [[ "$EXPECTED_SHA256" != "$ACTUAL_SHA256" ]]; then
-    format_message "ERROR" "Verificación de integridad fallida para miniconda.sh" "$ERROR"
-    exit 1
-  fi
-
-  # Damos permisos de ejecución
-  sudo -u "$REAL_USER" chmod u+x miniconda.sh
-
-  # Instalación desatendida en ~/miniconda3
-  sudo -u "$REAL_USER" bash miniconda.sh -b -p "$REAL_USER_HOME/miniconda3"
-
-  # Borrar instalador
-  sudo -u "$REAL_USER" rm -f miniconda.sh
-
-  format_message "INFO" "Miniconda instalada en $REAL_USER_HOME/miniconda3." "$INFO"
-
-  # Inicializar conda en shells del usuario
-  run_as_user_with_conda "conda init bash"
-  if [[ -f "$REAL_USER_HOME/.zshrc" ]]; then
-    run_as_user_with_conda "conda init zsh"
-  fi
-
-  # Configurar proxy si se especificó
-  if [[ -n "$PROXY_URL" ]]; then
-    format_message "INFO" "Configurando proxy para conda: $PROXY_URL" "$INFO"
-    run_as_user_with_conda "conda config --set proxy_servers.http $PROXY_URL && conda config --set proxy_servers.https $PROXY_URL"
-    format_message "OK" "Proxy configurado para conda." "$OK"
-  fi
-  
-  echo
-  format_message "INFO" "Se ha inicializado conda en la shell del usuario $REAL_USER." "$INFO"
-  format_message "INFO" "Reabriendo la terminal (o 'source ~/.bashrc') se activará conda (base)." "$INFO"
-
-  # Verificación de instalación
-  if command -v conda &>/dev/null; then
-    format_message "OK" "Instalación de conda verificada:" "$OK"
-    run_as_user_with_conda "conda --version"
-  else
-    format_message "ADVERTENCIA" "No se pudo verificar la instalación de conda" "$ADVERTENCIA"
-    format_message "SUGERENCIA" "Reinicia la terminal y ejecuta 'conda --version' manualmente" "$SUGERENCIA"
-  fi
-}
-
-###############################
-# LÓGICA PRINCIPAL DE FLUJO   #
-###############################
-case "$MODE" in
-  singularity)
-    format_message "INFO" "Modo: Singularity" "$INFO"
-
-    # 1. Ver si hay Go instalado y ofrecer desinstalarlo
-    GO_AVAILABLE=false
-    if command -v go &>/dev/null || [[ -d /usr/local/go ]] || [[ -d /opt/apps/go ]]; then
-      GO_AVAILABLE=true
-      GO_PATH=""
-
-      # Determinar la ruta a Go buscando en ubicaciones comunes
-      if command -v go &>/dev/null; then
-        GO_PATH=$(command -v go)
-        format_message "INFO" "Se ha detectado Go en el PATH: $GO_PATH" "$INFO"
-      elif [[ -d /usr/local/go/bin ]]; then
-        GO_PATH="/usr/local/go/bin/go"
-        format_message "INFO" "Se ha detectado Go en: /usr/local/go" "$INFO"
-      elif [[ -d /opt/apps/go/bin ]]; then
-        GO_PATH="/opt/apps/go/bin/go"
-        format_message "INFO" "Se ha detectado Go en: /opt/apps/go" "$INFO"
-      fi
-
-      # Mostrar versión con PATH expandido
-      if [[ -n "$GO_PATH" ]] && [[ -x "$GO_PATH" ]]; then
-        "$GO_PATH" version || true
-      else
-        # Intentar con PATH expandido manualmente
-        PATH="$PATH:/usr/local/go/bin:/opt/apps/go/bin" go version || true
-      fi
-
-      if ask_question " ¿Desinstalar Go previo? (s/N): " "n"; then
-        remove_go
-        GO_AVAILABLE=false
-      else
-        format_message "INFO" "Se mantiene la instalación actual de Go." "$INFO"
-      fi
+    # Verify installation
+    if sudo -u "$REAL_USER" bash -c "source $ENV_DIR/bin/activate && snakemake --version"; then
+        format_message "OK" "Virtual environment created successfully in $ENV_DIR" "$OK"
     else
-      format_message "INFO" "Go no se detecta en el sistema." "$INFO"
-    fi
-
-    # 2. Ofrecer instalar Go 1.24.1 si no está disponible
-    if ! $GO_AVAILABLE; then
-      if ask_question " ¿Instalar Go 1.24.1? (s/N): " "n"; then
-        install_go
-        GO_AVAILABLE=true
-      else
-        format_message "INFO" "No se instalará Go." "$INFO"
-      fi
-    fi
-
-    # 3. Ver si hay Singularity y ofrecer desinstalar
-    SINGULARITY_AVAILABLE=false
-    if command -v singularity &>/dev/null; then
-      SINGULARITY_AVAILABLE=true
-      format_message "INFO" "Se ha detectado Singularity: $(which singularity)" "$INFO"
-      singularity --version || true
-
-      if ask_question " ¿Desinstalar Singularity previo? (s/N): " "n"; then
-        remove_singularity
-        SINGULARITY_AVAILABLE=false
-      else
-        format_message "INFO" "Se mantiene la instalación actual de Singularity." "$INFO"
-      fi
-    else
-      format_message "INFO" "Singularity no se detecta en el sistema." "$INFO"
-    fi
-
-    # 4. Ofrecer instalar la versión 3.8.7
-    if ! $SINGULARITY_AVAILABLE; then
-      if ask_question " ¿Instalar Singularity v3.8.7? (s/N): " "n"; then
-        # Comprobar si Go está disponible (requerido para compilar Singularity)
-        if ! $GO_AVAILABLE; then
-          format_message "ADVERTENCIA" "Go es necesario para instalar Singularity." "$ADVERTENCIA"
-          if ask_question " ¿Instalar Go 1.24.1 primero? (S/n): " "s"; then
-            install_go
-            GO_AVAILABLE=true
-          else
-            format_message "INFO" "No se puede instalar Singularity sin Go." "$INFO"
-            # No se puede usar break aquí ya que no estamos en un bucle
-            continue 2
-          fi
-        fi
-
-        install_singularity
-        SINGULARITY_AVAILABLE=true
-      else
-        format_message "INFO" "No se instalará Singularity." "$INFO"
-      fi
-    fi
-
-    # 5. Ofrecer instalar entorno Python para Snakemake
-    if ask_question " ¿Crear entorno virtual de Python con Snakemake? (s/N): " "n"; then
-      install_python_venv
-    else
-      format_message "INFO" "No se instalará entorno Python." "$INFO"
-    fi
-    ;;
-
-  conda)
-    format_message "INFO" "Modo: conda" "$INFO"
-
-    # Variable para rastrear si conda está disponible
-    CONDA_AVAILABLE=false
-
-    # 1. Ver si conda está instalado - buscar en ubicaciones típicas
-    if command -v conda &>/dev/null || [[ -f "$REAL_USER_HOME/miniconda3/bin/conda" ]] || [[ -f "$REAL_USER_HOME/anaconda3/bin/conda" ]]; then
-      # Determinar la ruta a conda
-      CONDA_PATH=""
-      if command -v conda &>/dev/null; then
-        CONDA_PATH=$(command -v conda)
-      elif [[ -f "$REAL_USER_HOME/miniconda3/bin/conda" ]]; then
-        CONDA_PATH="$REAL_USER_HOME/miniconda3/bin/conda"
-      elif [[ -f "$REAL_USER_HOME/anaconda3/bin/conda" ]]; then
-        CONDA_PATH="$REAL_USER_HOME/anaconda3/bin/conda"
-      fi
-
-      format_message "INFO" "Se detecta conda en: $CONDA_PATH" "$INFO"
-      sudo -u "$REAL_USER" "$CONDA_PATH" --version || true
-      echo
-      format_message "ADVERTENCIA" "Esto puede corresponder a Anaconda, Miniconda u otra variante." "$ADVERTENCIA"
-      echo
-      # Preguntar si desinstalar usando la función ask_question
-      if ask_question " ¿Desinstalar conda? (s/N): " "n"; then
-        remove_conda
-        CONDA_AVAILABLE=false
-      else
-        format_message "INFO" "Se mantiene la instalación actual de conda." "$INFO"
-        CONDA_AVAILABLE=true
-      fi
-    else
-      format_message "INFO" "No se detecta conda en el sistema." "$INFO"
+        format_message "ERROR" "There was a problem creating the virtual environment" "$ERROR"
+        return 1
     fi
     echo
-    # 2. Si no hay conda disponible, ofrecer instalar
-    if ! $CONDA_AVAILABLE; then
-      if ask_question " ¿Instalar Miniconda3: Conda 25.1.1 - Python 3.12.9 (s/N): " "n"; then
-        install_conda
-        CONDA_AVAILABLE=true
-      else
-        format_message "INFO" "No se instalará Miniconda." "$INFO"
-      fi
+    # Optional: Add an alias to .bashrc to easily activate
+    if ask_question "Add alias 'snake_env' to activate the environment? (y/N): " "n"; then
+        echo
+        for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"; do
+            [[ -f "$SHELL_RC" ]] || continue
+            # Backup before modifying
+            cp "$SHELL_RC" "$SHELL_RC.bak_$(date +%Y%m%d%H%M%S)"
+
+            # Add alias
+            echo -e "\n# Alias to activate virtual environment snake_env (added by setup_env.sh)" >>"$SHELL_RC"
+            echo "alias snake_env='source $ENV_DIR/bin/activate'" >>"$SHELL_RC"
+
+            format_message "INFO" "Alias added to $SHELL_RC" "$INFO"
+        done
+
+        format_message "INFO" "Now you can use the command 'snake_env' to activate the environment" "$INFO"
+    else
+        format_message "INFO" "Alias will not be added. To activate the environment use:" "$INFO"
+        echo "       source $ENV_DIR/bin/activate"
     fi
 
-    # 3. Configuración de canales y mamba (solo si hay conda disponible)
-    if $CONDA_AVAILABLE; then
-      echo
-      if ask_question " ¿Quieres configurar canales (conda-forge, bioconda) e instalar mamba? (s/N): " "n"; then
-        format_message "INFO" "Configurando conda..." "$INFO"
+    echo
+    format_message "INFO" "You can also add this environment to VS Code:" "$INFO"
+    echo "  1. Open VS Code"
+    echo "  2. Press Ctrl+Shift+P"
+    echo "  3. Type 'Python: Select Interpreter'"
+    echo "  4. Select the environment in $ENV_DIR/bin/python3.12"
 
-        sudo -u "$REAL_USER" /bin/bash -c "source $REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh && \
-          conda config --remove-key channels || true && \
-          conda config --add channels defaults && \
-          conda config --add channels bioconda && \
-          conda config --add channels conda-forge && \
-          conda config --set channel_priority strict && \
-          conda update -n base conda -y && \
-          conda update --all -y && \
-          conda install -n base -c conda-forge mamba -y"
+    return 0
+}
 
-        format_message "OK" "Canales configurados y mamba instalado." "$OK"
+# ----- Install Miniconda (py312_25.1.1-2) -----
+install_conda() {
+    echo
+    format_message "INFO" "Installing version py312_25.1.1-2 of Miniconda3 for Linux x86_64..." "$INFO"
 
-        # Variable para rastrear si mamba está disponible
-        MAMBA_AVAILABLE=true
-      else
-        format_message "INFO" "No se configurarán canales ni mamba." "$INFO"
-        MAMBA_AVAILABLE=false
-      fi
+    # Make sure we have wget
+    apt-get update -y
+    apt-get install -y wget
 
-      # 4. Creación del entorno snake
-      echo
-      if ask_question " ¿Quieres crear el entorno 'snake' con Snakemake? (s/N): " "n"; then
-        format_message "INFO" "Creando entorno 'snake' con Snakemake..." "$INFO"
+    # We download to the real user's home (not /root)
+    cd "$REAL_USER_HOME"
+    sudo -u "$REAL_USER" wget -q https://repo.anaconda.com/miniconda/Miniconda3-py312_25.1.1-2-Linux-x86_64.sh -O miniconda.sh
 
-        # Si mamba está disponible, usarlo, sino usar conda
-        # En la sección donde defines INSTALL_CMD, añade "conda" a los paquetes
-        if $MAMBA_AVAILABLE; then
-          INSTALL_CMD="mamba create -n snake -y -c conda-forge bioconda::snakemake=9.1.1 \
-                      bioconda::snakemake-wrapper-utils=0.7.2 \
-                      pandas openpyxl git"
+    # Verify SHA256 checksum
+    EXPECTED_SHA256="4766d85b5f7d235ce250e998ebb5a8a8210cbd4f2b0fea4d2177b3ed9ea87884"
+    ACTUAL_SHA256=$(sha256sum miniconda.sh | cut -d' ' -f1)
+    if [[ "$EXPECTED_SHA256" != "$ACTUAL_SHA256" ]]; then
+        format_message "ERROR" "Integrity verification failed for miniconda.sh" "$ERROR"
+        exit 1
+    fi
+
+    # We give execution permissions
+    sudo -u "$REAL_USER" chmod u+x miniconda.sh
+
+    # Check if directory already exists and remove it if necessary
+    if [[ -d "$REAL_USER_HOME/miniconda3" ]]; then
+        format_message "WARNING" "Directory $REAL_USER_HOME/miniconda3 already exists" "$WARNING"
+        format_message "INFO" "Removing existing directory before installation..." "$INFO"
+        rm -rf "$REAL_USER_HOME/miniconda3"
+    fi
+
+    # Unattended installation in ~/miniconda3
+    sudo -u "$REAL_USER" bash miniconda.sh -b -p "$REAL_USER_HOME/miniconda3"
+
+    # Delete installer
+    sudo -u "$REAL_USER" rm -f miniconda.sh
+
+    format_message "INFO" "Miniconda installed in $REAL_USER_HOME/miniconda3." "$INFO"
+
+    # Initialize conda in user shells
+    run_as_user_with_conda "conda init bash"
+    if [[ -f "$REAL_USER_HOME/.zshrc" ]]; then
+        run_as_user_with_conda "conda init zsh"
+    fi
+
+    # Configure proxy if specified
+    if [[ -n "$PROXY_URL" ]]; then
+        format_message "INFO" "Configuring proxy for conda: $PROXY_URL" "$INFO"
+        run_as_user_with_conda "conda config --set proxy_servers.http $PROXY_URL && conda config --set proxy_servers.https $PROXY_URL"
+        format_message "OK" "Proxy configured for conda." "$OK"
+    fi
+
+    echo
+    format_message "INFO" "Conda has been initialized in the shell of user $REAL_USER." "$INFO"
+    format_message "INFO" "Reopening the terminal (or 'source ~/.bashrc') will activate conda (base)." "$INFO"
+
+    # Installation verification
+    if command -v conda &>/dev/null; then
+        format_message "OK" "Conda installation verified:" "$OK"
+        run_as_user_with_conda "conda --version"
+    else
+        format_message "WARNING" "Could not verify conda installation" "$WARNING"
+        format_message "TIP" "Restart the terminal and run 'conda --version' manually" "$TIP"
+    fi
+}
+
+###############################
+# MAIN FLOW LOGIC             #
+###############################
+case "$MODE" in
+    singularity)
+        format_message "INFO" "Mode: Singularity" "$INFO"
+
+        # 1. Check if Go is installed and offer to uninstall it
+        GO_AVAILABLE=false
+        if command -v go &>/dev/null || [[ -d /usr/local/go ]] || [[ -d /opt/apps/go ]]; then
+            GO_AVAILABLE=true
+            GO_PATH=""
+
+            # Determine the path to Go by searching in common locations
+            if command -v go &>/dev/null; then
+                GO_PATH=$(command -v go)
+                format_message "INFO" "Go detected in PATH: $GO_PATH" "$INFO"
+            elif [[ -d /usr/local/go/bin ]]; then
+                GO_PATH="/usr/local/go/bin/go"
+                format_message "INFO" "Go detected in: /usr/local/go" "$INFO"
+            elif [[ -d /opt/apps/go/bin ]]; then
+                GO_PATH="/opt/apps/go/bin/go"
+                format_message "INFO" "Go detected in: /opt/apps/go" "$INFO"
+            fi
+
+            # Show version with expanded PATH
+            if [[ -n "$GO_PATH" ]] && [[ -x "$GO_PATH" ]]; then
+                "$GO_PATH" version || true
+            else
+                # Try with manually expanded PATH
+                PATH="$PATH:/usr/local/go/bin:/opt/apps/go/bin" go version || true
+            fi
+            echo
+            if ask_question "Uninstall previous Go? (y/N): " "n"; then
+                remove_go
+                GO_AVAILABLE=false
+            else
+                format_message "INFO" "Current Go installation kept." "$INFO"
+            fi
         else
-          INSTALL_CMD="conda create -n snake -y -c conda-forge bioconda::snakemake=9.1.1 \
-                      bioconda::snakemake-wrapper-utils=0.7.2 \
-                      pandas openpyxl git"
+            format_message "INFO" "Go not detected in the system." "$INFO"
+        fi
+        echo
+        # 2. Offer to install Go 1.24.1 if not available
+        if ! $GO_AVAILABLE; then
+            if ask_question "Install Go 1.24.1? (y/N): " "n"; then
+                install_go
+                GO_AVAILABLE=true
+            else
+                format_message "INFO" "Go will not be installed." "$INFO"
+            fi
         fi
 
-        # Ejecutar la instalación
-        sudo -u "$REAL_USER" /bin/bash -c "source $REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh && \
-          $INSTALL_CMD && \
-          conda activate snake && \
-          snakemake --version"
-
-        format_message "OK" "Entorno 'snake' creado correctamente." "$OK"
-
-        # Asegurar que conda esté siempre disponible
+        # 3. Check if Singularity is present and offer to uninstall
+        SINGULARITY_AVAILABLE=false
+        if command -v singularity &>/dev/null; then
+            SINGULARITY_AVAILABLE=true
+            format_message "INFO" "Singularity detected: $(which singularity)" "$INFO"
+            singularity --version || true
+            echo
+            if ask_question "Uninstall previous Singularity? (y/N): " "n"; then
+                remove_singularity
+                SINGULARITY_AVAILABLE=false
+            else
+                format_message "INFO" "Current Singularity installation kept." "$INFO"
+            fi
+        else
+            format_message "INFO" "Singularity not detected in the system." "$INFO"
+        fi
         echo
-        format_message "INFO" "Asegurando disponibilidad de conda en todos los entornos..." "$INFO"
-        for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"
-        do
-          [[ -f "$SHELL_RC" ]] || continue
-          
-          # Verificar si ya existe una línea que añada miniconda3/bin al PATH
-          if ! grep -q "miniconda3/bin" "$SHELL_RC"; then
-            echo "# Asegurar acceso a conda en todos los entornos" >> "$SHELL_RC"
-            echo 'export PATH="$HOME/miniconda3/bin:$PATH"' >> "$SHELL_RC"
-            format_message "INFO" "Se ha añadido miniconda3/bin al PATH en $SHELL_RC" "$INFO"
-          fi
-        done
-        format_message "INFO" "Para activarlo usa: conda activate snake" "$INFO"
-      else
-        format_message "INFO" "No se creará el entorno snake." "$INFO"
-      fi
-    else
-      format_message "ADVERTENCIA" "Se requiere tener conda instalado para configurar canales, mamba o crear entornos." "$ADVERTENCIA"
-    fi
-    ;;
+        # 4. Offer to install version 3.8.7
+        if ! $SINGULARITY_AVAILABLE; then
+            if ask_question "Install Singularity v3.8.7? (y/N): " "n"; then
+                # Check if Go is available (required to compile Singularity)
+                if ! $GO_AVAILABLE; then
+                    format_message "WARNING" "Go is required to install Singularity." "$WARNING"
+                    if ask_question "Install Go 1.24.1 first? (Y/n): " "y"; then
+                        install_go
+                        GO_AVAILABLE=true
+                    else
+                        format_message "INFO" "Singularity cannot be installed without Go." "$INFO"
+                        # 'continue' cannot be used here since we are not in a loop
+                        exit 1
+                    fi
+                fi
 
-  *)
-    format_message "ERROR" "Modo inválido: $MODE" "$ERROR"
-    echo "Usa: $0 {singularity|conda}"
-    exit 1
-    ;;
+                install_singularity
+                SINGULARITY_AVAILABLE=true
+            else
+                format_message "INFO" "Singularity will not be installed." "$INFO"
+            fi
+        fi
+        echo
+        # 5. Offer to install Python environment for Snakemake
+        if ask_question "Create Python virtual environment with Snakemake? (y/N): " "n"; then
+            # Captura el código de retorno explícitamente
+            install_python_venv
+            python_env_status=$?
+            
+            if [ $python_env_status -ne 0 ]; then
+                format_message "WARNING" "There might have been issues with the Python environment installation" "$WARNING"
+            fi
+        else
+            format_message "INFO" "Python environment will not be installed." "$INFO"
+        fi
+        ;;
+
+    conda)
+        format_message "INFO" "Mode: conda" "$INFO"
+
+        # Variable to track if conda is available
+        CONDA_AVAILABLE=false
+
+        # 1. First, check if installation directories exist, even if they might be broken
+        CONDA_DIRS_EXIST=false
+        for CONDA_DIR in "$REAL_USER_HOME/miniconda3" "$REAL_USER_HOME/anaconda3" "$REAL_USER_HOME/conda"; do
+            if [[ -d "$CONDA_DIR" ]]; then
+                CONDA_DIRS_EXIST=true
+                format_message "WARNING" "Found existing conda directory: $CONDA_DIR" "$WARNING"
+            fi
+        done
+
+        # 2. Check if conda is installed and working correctly
+        if command -v conda &>/dev/null || [[ -f "$REAL_USER_HOME/miniconda3/bin/conda" ]] || [[ -f "$REAL_USER_HOME/anaconda3/bin/conda" ]]; then
+            # Determine the path to conda
+            CONDA_PATH=""
+            if command -v conda &>/dev/null; then
+                CONDA_PATH=$(command -v conda)
+            elif [[ -f "$REAL_USER_HOME/miniconda3/bin/conda" ]]; then
+                CONDA_PATH="$REAL_USER_HOME/miniconda3/bin/conda"
+            elif [[ -f "$REAL_USER_HOME/anaconda3/bin/conda" ]]; then
+                CONDA_PATH="$REAL_USER_HOME/anaconda3/bin/conda"
+            fi
+
+            format_message "INFO" "Conda detected in: $CONDA_PATH" "$INFO"
+            sudo -u "$REAL_USER" "$CONDA_PATH" --version || true
+            echo
+            format_message "WARNING" "This may correspond to Anaconda, Miniconda, or another variant." "$WARNING"
+            echo
+            # Ask if uninstall using the ask_question function
+            if ask_question "Uninstall conda? (y/N): " "n"; then
+                remove_conda
+                CONDA_AVAILABLE=false
+            else
+                format_message "INFO" "Current conda installation kept." "$INFO"
+                CONDA_AVAILABLE=true
+            fi
+        elif $CONDA_DIRS_EXIST; then
+            # 3. If directories were found but conda doesn't work, it's likely a broken installation
+            format_message "ERROR" "Found conda directories but conda is not working correctly!" "$ERROR"
+            format_message "WARNING" "This might be an incomplete or corrupted installation." "$WARNING"
+
+            if ask_question "Remove existing conda directories before proceeding? (Y/n): " "y"; then
+                remove_conda
+                CONDA_AVAILABLE=false
+            else
+                format_message "ERROR" "Cannot continue installation with existing directories." "$ERROR"
+                format_message "TIP" "Remove '$REAL_USER_HOME/miniconda3' manually or use this script to uninstall it." "$TIP"
+                exit 1
+            fi
+        else
+            format_message "INFO" "Conda not detected in the system." "$INFO"
+        fi
+        echo
+        # 4. If conda is not available, offer to install
+        if ! $CONDA_AVAILABLE; then
+            if ask_question "Install Miniconda3: Conda 25.1.1 - Python 3.12.9 (y/N) " "n"; then
+                install_conda
+                CONDA_AVAILABLE=true
+            else
+                format_message "INFO" "Miniconda will not be installed." "$INFO"
+            fi
+        fi
+
+        # 5. Channel configuration and mamba (only if conda is available)
+        if $CONDA_AVAILABLE; then
+            echo
+            if ask_question "Configure channels (conda-forge, bioconda) and install mamba? (y/N): " "n"; then
+                format_message "INFO" "Configuring conda..." "$INFO"
+
+                sudo -u "$REAL_USER" /bin/bash -c "source $REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh && \
+                    conda config --remove-key channels || true && \
+                    conda config --add channels defaults && \
+                    conda config --add channels bioconda && \
+                    conda config --add channels conda-forge && \
+                    conda config --set channel_priority strict && \
+                    conda update -n base conda -y && \
+                    conda update --all -y && \
+                    conda install -n base -c conda-forge mamba -y"
+
+                format_message "OK" "Channels configured and mamba installed." "$OK"
+
+                # Variable to track if mamba is available
+                MAMBA_AVAILABLE=true
+            else
+                format_message "INFO" "Channels and mamba will not be configured." "$INFO"
+                MAMBA_AVAILABLE=false
+            fi
+
+            # 6. Creation of the snake environment
+            echo
+            if ask_question "Create the 'snake' environment with Snakemake? (y/N): " "n"; then
+                format_message "INFO" "Creating 'snake' environment with Snakemake..." "$INFO"
+
+                # If mamba is available, use it, otherwise use conda
+                # In the section where you define INSTALL_CMD, add "conda" to the packages
+                if $MAMBA_AVAILABLE; then
+                    INSTALL_CMD="mamba create -n snake -y -c conda-forge bioconda::snakemake=9.1.1 \
+                                            bioconda::snakemake-wrapper-utils=0.7.2 \
+                                            pandas openpyxl git"
+                else
+                    INSTALL_CMD="conda create -n snake -y -c conda-forge bioconda::snakemake=9.1.1 \
+                                            bioconda::snakemake-wrapper-utils=0.7.2 \
+                                            pandas openpyxl git"
+                fi
+
+                # Execute the installation
+                sudo -u "$REAL_USER" /bin/bash -c "source $REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh && \
+                    $INSTALL_CMD && \
+                    conda activate snake && \
+                    snakemake --version"
+
+                format_message "OK" "'snake' environment created successfully." "$OK"
+
+                # Ensure that conda is always available
+                echo
+                format_message "INFO" "Ensuring conda availability in all environments..." "$INFO"
+                for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"; do
+                    [[ -f "$SHELL_RC" ]] || continue
+
+                    # Check if a line already exists that adds miniconda3/bin to the PATH
+                    if ! grep -q "miniconda3/bin" "$SHELL_RC"; then
+                        echo "# Ensure access to conda in all environments" >>"$SHELL_RC"
+                        echo 'export PATH="$HOME/miniconda3/bin:$PATH"' >>"$SHELL_RC"
+                        format_message "INFO" "miniconda3/bin has been added to PATH in $SHELL_RC" "$INFO"
+                    fi
+                done
+                format_message "INFO" "To activate it use: conda activate snake" "$INFO"
+            else
+                format_message "INFO" "The snake environment will not be created." "$INFO"
+            fi
+        else
+            format_message "WARNING" "Conda must be installed to configure channels, mamba, or create environments." "$WARNING"
+        fi
+        ;;
+
+    *)
+        format_message "ERROR" "Invalid mode: $MODE" "$ERROR"
+        echo "Usage: $0 {singularity|conda}"
+        exit 1
+        ;;
 esac
 
 echo
 echo -e "${BOLD}\033[32m====================================================================${COLOR_RESET}"
-format_message "FIN" "Script 'setup_conda_singularity.sh' finalizado correctamente." "$FIN"
+format_message "END" "Script 'setup_conda_singularity.sh' finished successfully." "$END"
 echo -e "${BOLD}\033[32m====================================================================${COLOR_RESET}"
 exit 0

@@ -154,22 +154,18 @@ def validate_samples(samples_file, config, mode=None, verbose=False):
         rename_dict = {k: v for k, v in rename_map_gva.items() if k in df.columns}
         validated_df = df.rename(columns=rename_dict)
 
-        # Obtener primary_id_column según la configuración
-        primary_id_column = (
-            config.get("mode_config", {})
-            .get("gva", {})
-            .get("primary_id_column", "id2")
-        )
-        if primary_id_column not in validated_df.columns:
-            fatal_errors.append(f"La columna {primary_id_column} no existe después del renombrado en modo GVA")
+        # En modo GVA, verificar que la columna id existe después del renombrado
+        if "id" not in validated_df.columns:
+            fatal_errors.append(f"La columna id (remapeada desde CODIGO_MUESTRA_ORIGEN) no existe después del renombrado")
             return {"status": 3, "warnings": warnings, "errors": errors, 
                     "fatal_errors": fatal_errors, "validated_df": None}
         
         # Verificar campos obligatorios estén llenos
         for i, row in validated_df.iterrows():
-            # Verificar CODIGO_MUESTRA_ORIGEN
-            if pd.isna(row.get('id2')) or str(row.get('id2')).strip() == '':
-                errors.append(f"Error en fila {i+2}: CODIGO_MUESTRA_ORIGEN no especificado")
+            # Verificar PETICION (id2)
+            if 'id2' in validated_df.columns:
+                if pd.isna(row.get('id2')) or str(row.get('id2')).strip() == '':
+                    errors.append(f"Error en fila {i+2}: PETICION no especificada")
             
             # Verificar campos importantes
             if 'organism' in validated_df.columns:
@@ -214,22 +210,19 @@ def validate_samples(samples_file, config, mode=None, verbose=False):
 
         # En modo normal, no hacemos renombrado
         validated_df = df.copy()
-        primary_id_column = "id"
 
     # Verificar que todas las muestras tienen valor en la columna ID primaria
-    missing_ids = validated_df[validated_df[primary_id_column].isna() | 
-                              (validated_df[primary_id_column] == "")].index.tolist()
+    missing_ids = validated_df[validated_df["id"].isna() | (validated_df["id"] == "")].index.tolist()
     if missing_ids:
-        fatal_errors.append(f"Filas sin valor en {primary_id_column}: {[i+2 for i in missing_ids]}")
+        fatal_errors.append(f"Filas sin valor en la columna de identificación: {[i+2 for i in missing_ids]}")
         return {"status": 3, "warnings": warnings, "errors": errors, 
                 "fatal_errors": fatal_errors, "validated_df": None}
                 
     # Verificar caracteres especiales en los IDs
     invalid_chars_pattern = re.compile(r'[^\w\-_]')
-    for i, sample_id in enumerate(validated_df[primary_id_column]):
+    for i, sample_id in enumerate(validated_df["id"]):
         if invalid_chars_pattern.search(str(sample_id)):
             errors.append(f"Error en fila {i+2}: ID '{sample_id}' contiene caracteres especiales no permitidos")
-
     # Verificar existencia de archivos FASTQ
     fastq_columns = [col for col in validated_df.columns 
                     if col in ["illumina_r1", "illumina_r2", "nanopore"]]
