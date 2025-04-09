@@ -70,7 +70,8 @@ class EpibacRunner:
         self.args = args
         self.logger = setup_logging(args.verbose)
         self.config_file = args.config or DEFAULT_CONFIG
-
+        self.conda_path = "conda"  # Valor por defecto
+    
     def run(self):
         """
         Ejecuta el comando especificado.
@@ -101,45 +102,146 @@ class EpibacRunner:
         else:
             self.logger.error(f"Comando desconocido: {command}")
             return 1
+        
+    def check_conda_available(self):
+        """
+        Verifica si conda está disponible en el sistema, incluso si no está en el PATH.
+        
+        Returns:
+            tuple: (bool, str) - (True si conda está disponible, ruta al ejecutable conda)
+        """
+        self.logger.debug("Verificando disponibilidad de conda...")
+        
+        # 1. Comprobar PATH primero (forma actual)
+        try:
+            result = subprocess.run(
+                ["conda", "--version"],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            self.logger.debug(f"Conda encontrado en PATH: {result.stdout.strip()}")
+            return True, "conda"
+        except (subprocess.SubprocessError, FileNotFoundError):
+            self.logger.debug("Conda no encontrado en PATH, buscando en ubicaciones alternativas...")
+        
+        # 2. Buscar en ubicaciones típicas
+        home_dir = os.path.expanduser("~")
+        common_paths = [
+            os.path.join(home_dir, "miniconda3/bin/conda"),
+            os.path.join(home_dir, "anaconda3/bin/conda"),
+            os.path.join(home_dir, "conda/bin/conda"),
+            "/opt/conda/bin/conda",
+            "/opt/miniconda3/bin/conda",
+            "/opt/anaconda3/bin/conda",
+            "/usr/local/miniconda3/bin/conda",
+            "/usr/local/anaconda3/bin/conda"
+        ]
+        
+        for path in common_paths:
+            if os.path.exists(path) and os.access(path, os.X_OK):
+                try:
+                    result = subprocess.run(
+                        [path, "--version"],
+                        check=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True
+                    )
+                    self.logger.debug(f"Conda encontrado en {path}: {result.stdout.strip()}")
+                    return True, path
+                except (subprocess.SubprocessError, FileNotFoundError):
+                    self.logger.debug(f"Error al ejecutar {path}")
+                    continue
+        
+        # 3. Buscar conda.sh como último recurso
+        conda_sh_paths = [
+            os.path.join(home_dir, "miniconda3/etc/profile.d/conda.sh"),
+            os.path.join(home_dir, "anaconda3/etc/profile.d/conda.sh"),
+            "/opt/conda/etc/profile.d/conda.sh",
+            "/opt/miniconda3/etc/profile.d/conda.sh",
+            "/opt/anaconda3/etc/profile.d/conda.sh"
+        ]
+        
+        for path in conda_sh_paths:
+            if os.path.exists(path):
+                # Si encontramos conda.sh, asumimos que conda está disponible
+                conda_bin = os.path.normpath(os.path.join(os.path.dirname(os.path.dirname(path)), "bin", "conda"))
+                if os.path.exists(conda_bin) and os.access(conda_bin, os.X_OK):
+                    self.logger.debug(f"Conda encontrado en {conda_bin} (a través de conda.sh)")
+                    return True, conda_bin
+        
+        self.logger.debug("No se encontró conda en ninguna ubicación común")
+        return False, None
 
     def check_dependencies(self):
         """
         Verifica que todas las dependencias necesarias estén instaladas.
-
+    
         Returns:
             bool: True si todas las dependencias están instaladas, False en caso contrario.
         """
         self.logger.info("Comprobando dependencias...")
-
-        deps = {
-            "snakemake": "snakemake --version",
-            "conda": "conda --version" if self.args.conda else None,
-            "singularity": "singularity --version" if self.args.singularity else None,
-        }
-
+    
         missing = []
-        for name, cmd in deps.items():
-            if cmd is None:
-                continue
+        
+        # Verificar snakemake (siempre requerido)
+        try:
+            subprocess.run(
+                ["snakemake", "--version"],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            self.logger.debug("✓ snakemake instalado correctamente")
+        except (subprocess.SubprocessError, FileNotFoundError):
+            missing.append("snakemake")
+            self.logger.error("✗ snakemake no encontrado o no funciona correctamente")
+        
+        # Verificar conda solo si se especificó --conda
+        if self.args.conda:
+            conda_available, conda_path = self.check_conda_available()
+            if conda_available:
+                self.logger.debug(f"✓ conda instalado correctamente: {conda_path}")
+                # Guardamos la ruta para usarla posteriormente
+                self.conda_path = conda_path
+            else:
+                missing.append("conda")
+                self.logger.error("✗ conda no encontrado o no funciona correctamente")
+                self.logger.info("Si está usando un entorno de conda activado, asegúrese de que el ejecutable conda esté disponible")
+        
+        # Verificar singularity solo si se especificó --singularity
+        if self.args.singularity:
             try:
                 subprocess.run(
-                    cmd.split(),
+                    ["singularity", "--version"],
                     check=True,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                 )
-                self.logger.debug(f"✓ {name} instalado correctamente")
+                self.logger.debug("✓ singularity instalado correctamente")
             except (subprocess.SubprocessError, FileNotFoundError):
-                missing.append(name)
-                self.logger.error(f"✗ {name} no encontrado o no funciona correctamente")
-
+                try:
+                    # Intentar con apptainer (el nuevo nombre de singularity)
+                    subprocess.run(
+                        ["apptainer", "--version"],
+                        check=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                    )
+                    self.logger.debug("✓ apptainer instalado correctamente")
+                except (subprocess.SubprocessError, FileNotFoundError):
+                    missing.append("singularity/apptainer")
+                    self.logger.error("✗ singularity/apptainer no encontrado o no funciona correctamente")
+    
         if missing:
             self.logger.error(f"Dependencias faltantes: {', '.join(missing)}")
             self.logger.error(
                 "Por favor, instala las dependencias faltantes antes de continuar"
             )
             return False
-
+    
         self.logger.info("Todas las dependencias están instaladas correctamente")
         return True
 
@@ -263,6 +365,19 @@ class EpibacRunner:
         # Configurar entorno de ejecución
         if self.args.conda:
             cmd.extend(["--use-conda"])
+            
+            # Si encontramos conda en una ubicación específica, asegurarnos de que Snakemake la use
+            if hasattr(self, 'conda_path') and self.conda_path != "conda":
+                conda_dir = os.path.dirname(self.conda_path)
+                conda_frontend = self.conda_path
+                cmd.extend([
+                    "--conda-frontend", "conda",
+                    "--conda-prefix", os.path.join(SCRIPT_DIR, "conda_envs"),
+                ])
+                # Añadir conda al PATH para la ejecución de Snakemake
+                os.environ["PATH"] = f"{conda_dir}:{os.environ.get('PATH', '')}"
+                self.logger.info(f"Usando conda desde: {self.conda_path}")
+                
         elif self.args.singularity:
             cmd.extend([
                 "--use-apptainer",
