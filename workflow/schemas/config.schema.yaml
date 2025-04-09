@@ -8,9 +8,6 @@ properties:
   outdir:
     type: string
     description: "Directorio de resultados"
-  logdir:
-    type: string
-    description: "Directorio de logs"
   refdir:
     type: string
     description: "Directorio de recursos y bases de datos"

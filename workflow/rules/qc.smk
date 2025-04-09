@@ -199,7 +199,7 @@ rule epibac_quast:
 
 rule multiqc:
     input:
-        validated=f"{OUTDIR}/samples_info_validated.csv",
+        validated=f"{LOGDIR}/samplesinfo/samplesinfo_validated.csv",
         fastqc_raw=lambda wc: [
             f"{OUTDIR}/qc/fastqc_raw/{sample}_r{read}_fastqc.zip"
             for sample in get_samples().index

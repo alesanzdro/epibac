@@ -26,7 +26,7 @@ resources/*
 # Permitir archivos .gitkeep
 !output/.gitkeep
 !logs/.gitkeep
-!resources/.gitkeep
+!resources/setup_conda_singularity.sh
 
 # Permitir datos de ejemplo
 !data/250319_ALIC001/

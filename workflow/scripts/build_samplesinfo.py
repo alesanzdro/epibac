@@ -286,7 +286,7 @@ def main():
     print(f"El archivo se ha generado correctamente en: {output_file}")
     print(f"Ahora puedes ejecutar:")
     print(
-        f"  epibac.py run --samples {output_file} --outdir results --run-name {args.run_name} --mode {args.mode}"
+        f"  ./epibac.py run --samples {output_file} --outdir output/{args.run_name} --run-name {args.run_name} --mode {args.mode}"
     )
 
 
