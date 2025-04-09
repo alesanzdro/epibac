@@ -35,3 +35,11 @@ resources/*
 # No ignorar nada en workflow
 !workflow/
 !workflow/**
+
+# Ignorar todos los directorios __pycache__ en cualquier nivel
+**/__pycache__/
+
+# Ignorar todos los archivos compilados de Python en cualquier nivel
+**/*.pyc
+**/*.pyo
+**/*.pyd
