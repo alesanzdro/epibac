@@ -41,6 +41,17 @@ format_message() {
     echo -e "${color}[${prefix}]${COLOR_RESET} ${message}"
 }
 
+# Function to clean duplicates in PATH
+clean_path() {
+    local old_path="$PATH"
+    PATH=$(echo "$old_path" | awk -v RS=':' '!a[$1]++ {if (NR > 1) printf ":"; printf $1}')
+    export PATH
+    format_message "INFO" "Cleaned duplicate entries in PATH." "$INFO"
+}
+
+# Call clean_path at the beginning of the script to ensure a clean PATH
+clean_path
+
 set -euo pipefail
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
@@ -781,6 +792,30 @@ case "$MODE" in
         exit 1
         ;;
 esac
+
+# Modify the section where PATH is updated to avoid duplicates
+if [[ ":$PATH:" != *":/usr/local/go/bin:"* ]]; then
+    export PATH="/usr/local/go/bin:$PATH"
+fi
+
+# Update .bashrc and .zshrc to avoid duplicate entries
+for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"; do
+    [[ -f "$SHELL_RC" ]] || continue
+    if ! grep -q "/usr/local/go/bin" "$SHELL_RC"; then
+        echo "export PATH=/usr/local/go/bin:\$PATH" >> "$SHELL_RC"
+        format_message "INFO" "Added /usr/local/go/bin to PATH in $SHELL_RC" "$INFO"
+    fi
+    if ! grep -q "$HOME/miniconda3/bin" "$SHELL_RC"; then
+        echo "export PATH=\"$HOME/miniconda3/bin:\$PATH\"" >> "$SHELL_RC"
+        format_message "INFO" "Added $HOME/miniconda3/bin to PATH in $SHELL_RC" "$INFO"
+    fi
+    # Clean duplicates in the shell configuration file
+    sed -i '/^export PATH=/!b; s/:/\n/g' "$SHELL_RC" | awk '!a[$0]++' | tr '\n' ':' | sed 's/:$//' > "$SHELL_RC.tmp"
+    mv "$SHELL_RC.tmp" "$SHELL_RC"
+    format_message "INFO" "Cleaned duplicate PATH entries in $SHELL_RC" "$INFO"
+    source "$SHELL_RC"
+    format_message "INFO" "Reloaded $SHELL_RC to apply changes." "$INFO"
+done
 
 echo
 echo -e "${BOLD}\033[32m====================================================================${COLOR_RESET}"

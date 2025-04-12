@@ -4,6 +4,8 @@ channels:
   - bioconda
   - defaults
 dependencies:
+  # Python (por compatibilidad con quast)
+  - python=3.12
   # Validación samples_info
   - pyyaml
   - pandas
@@ -21,8 +23,12 @@ dependencies:
   - porechop=0.2.4
   - filtlong=0.2.1
   # Evaluación del ensamblado
-  - quast=5.3.0
+  - quast=5.3.0=py312pl5321hdcc493e_1
+  - matplotlib
+  - joblib
+  - setuptools
+  - glimmerhmm  # si usas --glimmer
   - checkm-genome=1.2.3
-  - checkm2=1.1.0
+  #- checkm2=1.1.0
   # Reporte 
   - multiqc=1.28

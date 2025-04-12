@@ -167,7 +167,7 @@ rule epibac_quast:
     input:
         fasta=f"{OUTDIR}/assembly/{{sample}}/{{sample}}.fasta",
     output:
-        directory(f"{OUTDIR}/qc/quast/{{sample}}"),
+        directory(f"{OUTDIR}/qc/quast/{{sample}}")
     params:
         label=lambda wc: wc.sample,
     log:
@@ -182,20 +182,20 @@ rule epibac_quast:
         walltime=get_resource("quast", "walltime"),
     shell:
         """
+        # Verificar si el archivo FASTA está vacío
         if [ ! -s {input.fasta} ]; then
             echo "[ERROR] El archivo FASTA {input.fasta} está vacío." > {log}
             mkdir -p {output}
             exit 0
         fi
 
-        quast -t {threads} \
-              {input.fasta} \
-              -l {params.label} \
-              --glimmer \
-              -o {output} \
-              &>> {log}
-        """
+        # Corregir el shebang del script quast para usar el Python del entorno Conda
+        #QUAST_SCRIPT=$(which quast)
+        #sed -i "1s|^#!.*|#!$(which python)|" $QUAST_SCRIPT
 
+        # Ejecutar QUAST
+        quast -t {threads} {input.fasta} -l {params.label} --glimmer -o {output} &>> {log}
+        """
 
 rule multiqc:
     input:
