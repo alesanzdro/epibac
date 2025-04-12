@@ -364,19 +364,20 @@ class EpibacRunner:
         
         # Configure execution environment
         if self.args.conda:
-            cmd.extend(["--use-conda"])
-            
+            cmd.extend(["--use-conda", "--conda-frontend", "mamba"])
+
             # If conda is found in a specific location, ensure Snakemake uses it
             if hasattr(self, 'conda_path') and self.conda_path != "conda":
                 conda_dir = os.path.dirname(self.conda_path)
-                conda_frontend = self.conda_path
                 cmd.extend([
-                    "--conda-frontend", "conda",
                     "--conda-prefix", os.path.join(SCRIPT_DIR, "conda_envs"),
                 ])
                 # Add conda to PATH for Snakemake execution
                 os.environ["PATH"] = f"{conda_dir}:{os.environ.get('PATH', '')}"
                 self.logger.info(f"Using conda from: {self.conda_path}")
+                # Ensure setuptools is installed in the Conda environment
+                cmd.extend(["--conda-create-env-args", "--override-channels", "-c", "defaults", "-c", "conda-forge", "setuptools"])
+                self.logger.info("Ensuring setuptools is installed in the Conda environment")
                 
         elif self.args.singularity:
             cmd.extend([
