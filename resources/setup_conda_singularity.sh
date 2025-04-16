@@ -61,11 +61,12 @@ clean_path
 set -euo pipefail
 
 if [[ $# -lt 1 || $# -gt 2 ]]; then
-    echo "Usage: $0 {singularity|conda} [proxy_url]"
+    echo "Usage: $0 {singularity|conda|uninstall} [proxy_url]"
     echo "Examples:"
     echo "  $0 singularity"
     echo "  $0 conda"
     echo "  $0 conda http://proxy.san.gva.es:8080"
+    echo "  $0 uninstall       # Remove previous installations and configurations"
     exit 1
 fi
 
@@ -959,6 +960,110 @@ clean_epibac_shell_config() {
 }
 
 ###############################
+# FUNCTION: UNINSTALL EVERYTHING
+###############################
+uninstall_all() {
+    echo
+    format_message "INFO" "Starting uninstallation process..." "$INFO"
+    
+    # Check for conda installation
+    CONDA_DETECTED=false
+    if command -v conda &>/dev/null || [[ -d "$REAL_USER_HOME/miniconda3" ]] || [[ -d "$REAL_USER_HOME/anaconda3" ]]; then
+        CONDA_DETECTED=true
+        CONDA_PATH=""
+        
+        if command -v conda &>/dev/null; then
+            CONDA_PATH=$(command -v conda)
+        elif [[ -f "$REAL_USER_HOME/miniconda3/bin/conda" ]]; then
+            CONDA_PATH="$REAL_USER_HOME/miniconda3/bin/conda"
+        elif [[ -f "$REAL_USER_HOME/anaconda3/bin/conda" ]]; then
+            CONDA_PATH="$REAL_USER_HOME/anaconda3/bin/conda"
+        fi
+        
+        format_message "INFO" "Conda installation detected: $CONDA_PATH" "$INFO"
+        if [[ -n "$CONDA_PATH" ]]; then
+            # Try to get version info
+            sudo -u "$REAL_USER" "$CONDA_PATH" --version || true
+        fi
+        
+        # Ask to uninstall
+        echo
+        if ask_question "Do you want to uninstall conda and all environments? (y/N): " "n"; then
+            remove_conda
+            format_message "OK" "Conda has been uninstalled" "$OK"
+        else
+            format_message "INFO" "Conda will be kept" "$INFO"
+        fi
+    else
+        format_message "INFO" "No conda installation detected" "$INFO"
+    fi
+    
+    # Check for Go installation
+    GO_DETECTED=false
+    if command -v go &>/dev/null || [[ -d /usr/local/go ]]; then
+        GO_DETECTED=true
+        GO_PATH=""
+        
+        if command -v go &>/dev/null; then
+            GO_PATH=$(command -v go)
+            format_message "INFO" "Go detected in PATH: $GO_PATH" "$INFO"
+        elif [[ -d /usr/local/go/bin ]]; then
+            GO_PATH="/usr/local/go/bin/go"
+            format_message "INFO" "Go detected in: /usr/local/go" "$INFO"
+        fi
+        
+        if [[ -n "$GO_PATH" ]] && [[ -x "$GO_PATH" ]]; then
+            "$GO_PATH" version || true
+        else
+            PATH="$PATH:/usr/local/go/bin" go version || true
+        fi
+        
+        # Ask to uninstall
+        echo
+        if ask_question "Do you want to uninstall Go? (y/N): " "n"; then
+            remove_go
+            format_message "OK" "Go has been uninstalled" "$OK"
+        else
+            format_message "INFO" "Go will be kept" "$INFO"
+        fi
+    else
+        format_message "INFO" "No Go installation detected" "$INFO"
+    fi
+    
+    # Check for Singularity installation
+    SINGULARITY_DETECTED=false
+    if command -v singularity &>/dev/null; then
+        SINGULARITY_DETECTED=true
+        format_message "INFO" "Singularity detected: $(which singularity)" "$INFO"
+        singularity --version || true
+        
+        # Ask to uninstall
+        echo
+        if ask_question "Do you want to uninstall Singularity? (y/N): " "n"; then
+            remove_singularity
+            format_message "OK" "Singularity has been uninstalled" "$OK"
+        else
+            format_message "INFO" "Singularity will be kept" "$INFO"
+        fi
+    else
+        format_message "INFO" "No Singularity installation detected" "$INFO"
+    fi
+    
+    # Clean up EPIBAC configuration from shell files
+    echo
+    if ask_question "Do you want to remove EPIBAC configuration from shell files (.bashrc/.zshrc)? (y/N): " "n"; then
+        clean_epibac_shell_config
+        format_message "OK" "EPIBAC configuration has been removed from shell files" "$OK"
+    else
+        format_message "INFO" "EPIBAC configuration will be kept in shell files" "$INFO"
+    fi
+    
+    echo
+    format_message "INFO" "Uninstallation process completed" "$INFO"
+    format_message "TIP" "You may need to restart your terminal for all changes to take effect" "$TIP"
+}
+
+###############################
 # MAIN FLOW LOGIC             #
 ###############################
 case "$MODE" in
@@ -1207,10 +1312,15 @@ case "$MODE" in
             format_message "WARNING" "Conda must be installed to configure channels, mamba, or create environments." "$WARNING"
         fi
         ;;
+        
+    uninstall)
+        format_message "INFO" "Mode: Uninstall" "$INFO"
+        uninstall_all
+        ;;
 
     *)
         format_message "ERROR" "Invalid mode: $MODE" "$ERROR"
-        echo "Usage: $0 {singularity|conda}"
+        echo "Usage: $0 {singularity|conda|uninstall}"
         exit 1
         ;;
 esac
