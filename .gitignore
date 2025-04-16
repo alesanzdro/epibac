@@ -1,22 +1,49 @@
-*
-.snakemake
-.conda
-.DS_Store
-!.gitignore
-!authors.md
+# Ignorar todo por defecto, pero permitir directorios
+**/*
+!*/
+
+# Permitir archivos clave en la raíz
+!epibac.py
 !config.yaml
-!dag.png
-!envs  
-!envs/*
-!LICENSE  
-!README.md  
-!report.html  
-!rules
-!rules/*
-!scripts
-!scripts/*
-!Snakefile
-!test
-!test/*
-!test/raw_data
-!test/raw_data/*
+!LICENSE
+!README.md
+!.gitignore
+!CHANGELOG.md
+!CONTRIBUTING.md
+
+# No ignorar workflow y su contenido
+!workflow/
+!workflow/**
+
+# No ignorar output, logs, resources (solo sus carpetas)
+!output/
+!logs/
+!resources/
+
+# Ignorar contenido por defecto en estas carpetas
+output/*
+logs/*
+resources/*
+
+# Permitir archivos específicos en esas carpetas
+!output/.gitkeep
+!logs/.gitkeep
+!resources/setup_conda_singularity.sh
+
+# Ignorar por defecto todo en data
+data/*
+
+# Permitir carpeta de ejemplo con fastq
+#!data/250319_ALIC001/
+#!data/250319_ALIC001/**/
+#!data/250319_ALIC001/**/*.fastq.gz
+data/**/*.fastq.gz
+
+# Ignorar pycache y binarios de Python
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Ignorar toda la carpeta de Snakemake (entornos, locks, logs, etc.)
+.snakemake/

@@ -32,22 +32,30 @@ rm -rf ~/miniconda.sh
 
 ## Configuración inicial de CONDA
 
-Activamos conda:
+Cargamos conda:
 ```bash
 source ~/miniconda3/etc/profile.d/conda.sh
 ```
+
+Limpiamos canales anteriores:
+```bash
+conda config --remove-key channels
+```
+
+Añadimos canales de forma explícita:
+```bash
+conda config --append channels conda-forge
+conda config --append channels bioconda
+conda config --append channels defaults
+```
+
+Es posible que salga una advertencia sobre el canal `defaults`.
+
 
 Configuramos PROXY GVA en CONDA (en caso que haga falta):
 ```bash
 conda config --set proxy_servers.http http://proxy.san.gva.es:8080
 conda config --set proxy_servers.https http://proxy.san.gva.es:8080
-```
-
-Añadimos canales de forma explícita:
-
-```bash
-conda config --add channels conda-forge
-conda config --add channels defaults
 ```
 
 Configuramos conda para que se inicie automáticamente en nuevos shells:
@@ -60,7 +68,7 @@ Este comando configurará conda para que se inicie automáticamente cuando abres
 > [!NOTE]
 > Cerramos la terminal y abrimos una nueva, para asegurarnos de que los cambios surtan efecto.
 
-Nos aseguramos que tenemos la última versión tanto de conda como de los paquetes del entorno base:
+Actualizamos a la última versión tanto de conda como de los paquetes del entorno base:
 ```bash
 conda update conda
 conda update --all
@@ -101,13 +109,18 @@ conda install -n base -c conda-forge mamba
 conda install --override-channels -n base -c conda-forge mamba
 ```
 
+Nos aseguramos tener mamba actualizado:
+```bash
+mamba update -n base -c conda-forge mamba
+```
+
 
 # Creamos ambiente con SNAKEMAKE mediante MAMBA
 
 Éste será el único ambiente que instalaremos manualmente y que llamaremos `snake`. Al instalarlo con `mamba`, irá mucho más rápido.
 
 ```bash
-mamba create -n snake -c conda-forge bioconda::snakemake=7.32 bioconda::snakemake-minimal=7.32 snakemake-wrapper-utils pandas openpyxl git
+mamba create -n snake -c conda-forge bioconda::snakemake=9.1.1 bioconda::snakemake-minimal=9.1.1 bioconda::snakemake-wrapper-utils=0.7.2 pandas openpyxl git
 ```
 
 
@@ -154,20 +167,112 @@ En el siguiente gráfico se muestra el esquema básico de trabajo para una muest
 
 ![Grafo flujo de trabajos con una muestra](test/dag.png)
 
+# Fichero de información de las muestras INPUT para el pipeline
 
-Y el resultado debería dar:
+## Ejemplo: samples_info.csv
 
-| | | | | | | | | |
-|-|-|-|-|-|-|-|-|-|
-|Sample|Scheme_mlst|ST|MLST|AMR|VIRULENCE|SCOPE_core|GENE_resfinder|PHENO_resfinder|
-|23_SALM_92123|senterica_achtman_2|1628|aroC(46) dnaN(60) hemD(10) hisD(9) purE(6) sucA(12) thrA(17)|fosA7.7 mdsA mdsB tet(C)|iroB iroC sinH|fosA7.7 tet(C)|aac(6')-Iaa fosA7 tet(C)|tobramycin-amikacin[aminoglycoside] fosfomycin[fosfomycin] tetracycline-doxycycline[tetracycline]|
+| **PETICION** | **CODIGO_ORIGEN** | **FECHA_TOMA_MUESTRA** | **MO**              | **MOTIVO_WGS** | **CARRERA**         | **ILLUMINA_R1**                                      | **ILLUMINA_R2**                                      | **ONT** | **MODELO_DORADO** |
+|--------------|-------------------|-------------------------|---------------------|-----------------|---------------------|------------------------------------------------------|------------------------------------------------------|---------|--------------------|
+| 900121232    | EPI00520          | 1/7/24                 | Enterococcus faecium | Vigilancia      | 240809_EPIM185     | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00520_S84_R1_001.fastq.gz | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00520_S84_R2_001.fastq.gz |         |                    |
+| 900121233    | EPI00521          | 1/7/24                 | Enterococcus faecium | Vigilancia      | 240809_EPIM185     | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00521_S85_R1_001.fastq.gz | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00521_S85_R2_001.fastq.gz |         |                    |
+| 900121234    | EPI00522          | 1/7/24                 | Enterococcus faecium | Vigilancia      | 240809_EPIM185     | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00522_S86_R1_001.fastq.gz | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00522_S86_R2_001.fastq.gz |         |                    |
+| 900121235    | EPI00523          | 1/7/24                 | Enterococcus faecium | Vigilancia      | 240809_EPIM185     | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00523_S87_R1_001.fastq.gz | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00523_S87_R2_001.fastq.gz |         |                    |
+| 900121236    | EPI00524          | 1/7/24                 | Enterococcus faecium | Vigilancia      | 240809_EPIM185     | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00524_S88_R1_001.fastq.gz | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00524_S88_R2_001.fastq.gz |         |                    |
 
+## Descripción de columnas: `samples_info.csv`
+
+| **Columna**            | **Descripción**                                                                                                                                                                                                                                                                                                  |
+|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **PETICION**           | Identificador interno de la muestra. Puede dejarse vacío, pero en ese caso **la columna CODIGO_ORIGEN debe tener valor**.                                                                                                                                                                                         |
+| **CODIGO_ORIGEN**      | Identificador externo o alternativo de la muestra. Es obligatorio si PETICION está vacío.                                                                                                                                                                                                                         |
+| **FECHA_TOMA_MUESTRA** | Fecha en que se tomó la muestra. El formato preferido es `AAAA-MM-DD`, pero también se aceptan otros formatos como `DD/MM/AA` (ej. generado por Excel). En la validación, se intentará convertirla y se emitirá una advertencia si es necesario. Si no se puede interpretar, se generará un **error de validación**. |
+| **MO**                 | Microorganismo esperado o identificado en la muestra. Se normaliza automáticamente a minúsculas con guiones bajos. Debe coincidir con uno de los organismos definidos en `config.yaml`.                                                                                                                          |
+| **MOTIVO_WGS**         | Razón por la que se secuenció la muestra. Por ejemplo: `Vigilancia`.                                                                                                                                                                                                                                             |
+| **CARRERA**            | Código de la carrera en formato `AAMMDD_HOSPXXX`, donde: `AAMMDD` es la fecha de secuenciación, `HOSP` es el centro secuenciador (p. ej., `ALIC`, `CLIN`, `EPIM`...), y `XXX` es un número secuencial. Si no cumple este patrón, se genera **error de validación**.                                                 |
+| **ILLUMINA_R1**        | Ruta relativa o absoluta al archivo `.fastq.gz` de la primera lectura (`Read 1`) de Illumina.                                                                                                                                                                                                                      |
+| **ILLUMINA_R2**        | Ruta relativa o absoluta al archivo `.fastq.gz` de la segunda lectura (`Read 2`) de Illumina. Obligatorio si `ILLUMINA_R1` está presente.                                                                                                                                                                         |
+| **ONT**                | Ruta al archivo de lecturas de Nanopore. Puede omitirse si no se ha usado ONT.                                                                                                                                                                                                                                    |
+| **MODELO_DORADO**      | Modelo de basecalling de Dorado usado (solo si hay ONT). Ejemplos: `dna_r10.4.1_e8.2_400bps_sup@v4.3.0` o `dna_r9.4.1_450bps_sup@v3.6.0`.                                                                                                                                                                         |
+
+## Tabla Validada
+
+| **id**    | **id2**   | **collection_date** | **organism**          | **relevance** | **run_id**         | **illumina_r1**                                      | **illumina_r2**                                      | **nanopore** | **dorado_model** |
+|-----------|-----------|---------------------|-----------------------|---------------|--------------------|------------------------------------------------------|------------------------------------------------------|--------------|------------------|
+| 900121232 | EPI00520  | 2024-07-01          | enterococcus_faecium  | Vigilancia    | 240809_EPIM185    | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00520_S84_R1_001.fastq.gz | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00520_S84_R2_001.fastq.gz |              |                  |
+| 900121233 | EPI00521  | 2024-07-01          | enterococcus_faecium  | Vigilancia    | 240809_EPIM185    | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00521_S85_R1_001.fastq.gz | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00521_S85_R2_001.fastq.gz |              |                  |
+| 900121234 | EPI00522  | 2024-07-01          | enterococcus_faecium  | Vigilancia    | 240809_EPIM185    | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00522_S86_R1_001.fastq.gz | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00522_S86_R2_001.fastq.gz |              |                  |
+| 900121235 | EPI00523  | 2024-07-01          | enterococcus_faecium  | Vigilancia    | 240809_EPIM185    | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00523_S87_R1_001.fastq.gz | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00523_S87_R2_001.fastq.gz |              |                  |
+| 900121236 | EPI00524  | 2024-07-01          | enterococcus_faecium  | Vigilancia    | 240809_EPIM185    | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00524_S88_R1_001.fastq.gz | /ALMEIDA/PROJECTS/CODE/epibac/data/EPI00524_S88_R2_001.fastq.gz |              |                  |
+
+EPIBAC está adaptado para trabajar con dos modelos de entrada de información sobre las muestras, según el fichero `config.yaml`, **modo normal** o **modo gva** (adaptado para los hospitales de la Comunidad Valenciana). En caso de trabajar en modo GVA, tenemos unos nombres de columnas que se normalizarán y que serán validados al formato de entrada por defecto para el pipeline de EPIBAC. En el modo GVA también se genera un reporte particular para resolver las peticiones de cara a los hospitales.
+
+---
+
+# Fichero de resultados modo "normal" y modo "gva" de las muestras OUTPUT
+
+## Resultado normal ejemplo:
+
+| Sample         | Scheme_mlst           | ST   | MLST                                            | AMR                   | VIRULENCE   | SCOPE_core   | GENE_resfinder           | PHENO_resfinder                                                                                      |
+|----------------|-----------------------|------|-------------------------------------------------|-----------------------|-------------|-------------|--------------------------|--------------------------------------------------------------------------------------------------------|
+| 23_SALM_92123  | senterica_achtman_2  | 1628 | aroC(46) dnaN(60) hemD(10) hisD(9) purE(6) sucA(12) thrA(17) | fosA7.7 mdsA mdsB tet(C) | iroB iroC sinH | fosA7.7 tet(C) | aac(6')-Iaa fosA7 tet(C) | tobramycin-amikacin\[aminoglycoside\] fosfomycin\[fosfomycin\] tetracycline-doxycycline\[tetracycline\] |
+
+## Tabla resultados modo GVA
+
+| **PETICION**   | **CODIGO_ORIGEN** | **FECHA_TOMA_MUESTRA** | **MO**                 | **MOTIVO_WGS** | **CARRERA**         | **ILLUMINA_R1**                          | **ILLUMINA_R2**                          | **ONT** | **MODELO_DORADO** | **ID-WGS** | **ST-WGS** | **R-Geno-WGS** (Genes Resistencia)                                                                                                                                                                                                          | **V-WGS** | **MO-EST-WGS** | **Tipo_Analisis_WGS** | **Plasmidos-WGS** | **Fichero_lecturas_WGS**                              |
+|----------------|-------------------|-------------------------|------------------------|----------------|---------------------|-------------------------------------------|-------------------------------------------|---------|--------------------|------------|------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------------|------------------------|--------------------|---------------------------------------------------------|
+| 900121232      | EPI00520          | 2024-07-01             | enterococcus_faecium  | Vigilancia     | 240809_EPIM185     | EPI00520_S84_R1_001.fastq.gz             | EPI00520_S84_R2_001.fastq.gz             |         |                    | efaecium   | 117        | msr(C) aac(6')-I vanS-B vanR-B mef(H) dfrG ant(6)-Ia sat4 aph(3')-IIIa aac(6')-Ie/aph(2'')-Ia vanY-B vanW-B vanH-B vanB vanX-B erm(B)                                                                                                        |          | Bacterias     | Verificación          |                    | \\NLSAR\deposito\CVA_EPIM\illumina\240809_EPIM185     |
+| 900121233      | EPI00521          | 2024-07-01             | enterococcus_faecium  | Vigilancia     | 240809_EPIM185     | EPI00521_S85_R1_001.fastq.gz             | EPI00521_S85_R2_001.fastq.gz             |         |                    | efaecium   | 80         | aac(6')-I msr(C) dfrG tet(L) tet(M) ant(6)-Ia optrA vanZ-A vanY-A vanX-A vanA vanH-A cfr(D) aac(6')-Ie/aph(2'')-Ia vanS-A vanR-A erm(T)                                                                                                        |          | Bacterias     | Verificación          |                    | \\NLSAR\deposito\CVA_EPIM\illumina\240809_EPIM185     |
+| 900121234      | EPI00522          | 2024-07-01             | enterococcus_faecium  | Vigilancia     | 240809_EPIM185     | EPI00522_S86_R1_001.fastq.gz             | EPI00522_S86_R2_001.fastq.gz             |         |                    | efaecium   | 117        | msr(C) aac(6')-I vanS-B vanR-B mef(H) vanR-A vanS-A vanH-A vanA vanX-A vanY-A vanZ-A optrA dfrG aph(3')-IIIa sat4 ant(6)-Ia vanY-B vanW-B vanH-B vanB vanX-B cfr(D)                                                                          |          | Bacterias     | Verificación          |                    | \\NLSAR\deposito\CVA_EPIM\illumina\240809_EPIM185     |
+| 900121235      | EPI00523          | 2024-07-01             | enterococcus_faecium  | Vigilancia     | 240809_EPIM185     | EPI00523_S87_R1_001.fastq.gz             | EPI00523_S87_R2_001.fastq.gz             |         |                    | efaecium   | 80         | aac(6')-I msr(C) dfrG tet(M) tet(L) optrA vanZ-A vanY-A vanX-A vanA vanH-A cfr(D) aac(6')-Ie/aph(2'')-Ia vanR-A vanS-A aph(3')-IIIa erm(T)                                                                                                    |          | Bacterias     | Verificación          |                    | \\NLSAR\deposito\CVA_EPIM\illumina\240809_EPIM185     |
+| 900121236      | EPI00524          | 2024-07-01             | enterococcus_faecium  | Vigilancia     | 240809_EPIM185     | EPI00524_S88_R1_001.fastq.gz             | EPI00524_S88_R2_001.fastq.gz             |         |                    | efaecium   | 117        | msr(C) aac(6')-I vanS-B vanR-B mef(H) dfrG optrA vanR-A vanS-A vanH-A vanA vanX-A vanY-A vanZ-A aph(3')-IIIa sat4 ant(6)-Ia vanX-B vanB vanH-B vanW-B vanY-B cfr(D)                                                                            |          | Bacterias     | Verificación          |                    | \\NLSAR\deposito\CVA_EPIM\illumina\240809_EPIM185     |
+
+## Campos añadidos en el reporte GESTLAB (`*_EPIBAC_GESTLAB.csv`)
+
+| **Columna**               | **Descripción**                                                                                                                                                                                          |
+|---------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **ID-WGS**                | Esquema MLST o identificación del organismo detectado.                                                                                                                                                  |
+| **ST-WGS**                | Serotipo o Sequence Type (ST) detectado para la muestra.                                                                                                                                               |
+| **MLST-WGS**              | Genes que conforman el esquema MLST.                                                                                                                                                                    |
+| **R-Geno-WGS**            | Genes de resistencia genotípica detectados.                                                                                                                                                             |
+| **PHENO-WGS**             | Posibles resistencias fenotípicas inferidas a partir de los genes detectados.                                                                                                                           |
+| **V-WGS**                 | Factores de virulencia detectados.                                                                                                                                                                      |
+| **Plasmidos-WGS**         | Información sobre plásmidos detectados (aún no implementado, actualmente se deja como `NA`).                                                                                                            |
+| **MO-EST-WGS**            | Tipo de microorganismo analizado. Actualmente todas las muestras se anotan como `Bacterias`.                                                                                                            |
+| **Tipo_Analisis_WGS**     | Tipo de análisis realizado. Valor por defecto: `Verificación`.                                                                                                                                           |
+| **Fichero_lecturas_WGS**  | Ruta de la cabina donde se depositarán los ficheros `.fastq`. Se construye automáticamente a partir del campo `CARRERA`. Por ejemplo: `\\NLSAR\deposito\CVA_EPIM\illumina\240809_EPIM185`.              |
+| **ILLUMINA_R1 / R2 / ONT** | En este reporte, estas columnas se limpian para mostrar únicamente el nombre del archivo `.fastq.gz`, sin el path completo.                                                                            |
+
+---
+
+# LANZAR EL EPIBAC
+
+## Opción `primary_id_column``
+
+La opción `primary_id_column=id2` indica que, dentro del fichero `samples_info.csv`, la columna de identificación principal que usará EPIBAC para nombrar y organizar las muestras será `id2`. Esto significa que todos los resultados y ficheros intermedios del pipeline se generarán basados en el valor contenido en esta columna en vez de la columna `id` u otra. 
+
+De cara a los hospitales, es importante definir correctamente qué valor se incluye en `id2` para asegurar que los resultados se identifiquen adecuadamente en sus reportes internos. Por ejemplo, `id2` podría corresponder a un código propio del hospital, y así, al final del análisis, sea más fácil asociar cada salida del pipeline con la muestra concreta del laboratorio.
+
+## Validar `samples_info`
+```bash
+snakemake --config samples=test/samples_info.csv outdir=test/out logdir=test/log primary_id_column=id2 --use-conda -j 16
+```
+
+**Nota sobre validación:**
+Si la validación del fichero samples_info.csv falla (por formato incorrecto, fechas futuras, rutas inválidas o nombres mal formateados), el pipeline se detendrá. Se recomienda revisar el archivo de advertencias generado en la ruta de logs correspondiente para corregir los problemas.
+
+## Ejecutar test de prueba
+```bash
+snakemake --config samples=test/samples_info.csv outdir=test/out logdir=test/log primary_id_column=id2 --use-conda -j 16 --rerun-incomplete all
+```
 
 ## Relanzar pipeline
 En caso de que hubiéramos tenido algún error podríamos volver a intentar lanzar el pipeline añadiendo la opción `--rerun-incomplete`
 ```bash
 snakemake --config samples=test/samplesheet.tsv outdir=test/out logdir=test/log --use-conda -j 8 --rerun-incomplete
 ```
+
+
+
 
 # Lanzar un análisis con mis propias muestras
 

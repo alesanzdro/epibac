@@ -1,0 +1,47 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: "Esquema para archivo de muestras"
+description: "Esquema para validar el archivo de muestras en modo normal o GVA"
+type: object
+
+properties:
+  id:
+    type: string
+    description: "Identificador principal de la muestra (obligatorio)"
+  id2:
+    type: [string, null]
+    description: "Identificador secundario (obligatorio en modo GVA)"
+  collection_date:
+    type: [string, null]
+    description: "Fecha de recolección (formato preferido: YYYY-MM-DD)"
+  organism:
+    type: [string, null]
+    description: "Organismo"
+  illumina_r1:
+    type: [string, null]
+    description: "Ruta al archivo FASTQ R1 de Illumina"
+  illumina_r2:
+    type: [string, null]
+    description: "Ruta al archivo FASTQ R2 de Illumina"
+  nanopore:
+    type: [string, null]
+    description: "Ruta al archivo FASTQ de Oxford Nanopore"
+  outbreak_id:
+    type: [string, null]
+    description: "Identificador de brote (solo en modo GVA)"
+  relevance:
+    type: [string, null]
+    description: "Relevancia o motivo WGS (solo en modo GVA)"
+  comment:
+    type: [string, null]
+    description: "Comentarios adicionales"
+  confirmation_note:
+    type: [string, null]
+    description: "Notas de confirmación (solo en modo GVA)"
+
+oneOf:
+  - required: ["id", "illumina_r1", "illumina_r2"]
+    description: "Muestra con secuenciación Illumina (paired-end)"
+  - required: ["id", "nanopore"]
+    description: "Muestra con secuenciación Nanopore"
+  - required: ["id", "illumina_r1", "illumina_r2", "nanopore"]
+    description: "Muestra con secuenciación híbrida (Illumina + Nanopore)"
