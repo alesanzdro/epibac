@@ -32,6 +32,12 @@ TIP="${BOLD}\033[38;5;208m"     # Bold orange (requires 256-color support)
 OK="${BOLD}\033[32m"            # Bold green
 END="${BOLD}\033[32m"           # Bold green
 
+# Constantes para las etiquetas de configuración - MOVER AL PRINCIPIO DEL SCRIPT
+EPIBAC_TAG_START="# >>> EPIBAC_CONFIG >>>"
+EPIBAC_TAG_END="# <<< EPIBAC_CONFIG <<<"
+CONDA_TAG_START="# >>> conda initialize >>>"
+CONDA_TAG_END="# <<< conda initialize <<<"
+
 # Function to use in echo with colors
 format_message() {
     local prefix="$1"
@@ -76,6 +82,20 @@ fi
 REAL_USER="${SUDO_USER:-root}"
 REAL_USER_HOME="$(eval echo ~"$REAL_USER")"
 
+# Inicializar variables de instalación al principio del script
+CONDA_INSTALLED=false
+SINGULARITY_INSTALLED=false
+GO_INSTALLED=false
+
+# Inicializar las variables de rastreo al principio del script
+GO_INSTALLED_BY_SCRIPT=false
+SINGULARITY_INSTALLED_BY_SCRIPT=false
+CONDA_INSTALLED_BY_SCRIPT=false
+
+# Inicializar variables para el entorno Python
+SNAKE_ENV_ALIAS_REQUESTED=false
+SNAKE_ENV_PATH=""
+
 echo -e "${BOLD}======================================${COLOR_RESET}"
 echo -e "${BOLD} Script setup_env.sh - Option: $MODE ${COLOR_RESET}"
 echo -e "${BOLD} Real User:       $REAL_USER${COLOR_RESET}"
@@ -111,10 +131,16 @@ ask_question() {
     done
 }
 
-# Auxiliary function to execute conda commands as the real user
-run_as_user_with_conda() {
+# Mejorar la función para ejecutar comandos como el usuario real sin pedir contraseña
+run_as_real_user() {
     local cmd="$1"
-    sudo -u "$REAL_USER" /bin/bash -c "source $REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh && $cmd"
+    # Si estamos ejecutando como root, usamos su para ejecutar como el usuario real
+    if [[ $EUID -eq 0 ]]; then
+        su -l "$REAL_USER" -c "$cmd"
+    else
+        # Si no somos root, simplemente ejecutamos el comando
+        bash -c "$cmd"
+    fi
 }
 
 ###############################
@@ -233,22 +259,8 @@ install_go() {
     rm -rf /usr/local/go
     tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
 
-    # Add PATH and GOPATH to the user's shell
-    format_message "INFO" "Configuring environment variables for Go..." "$INFO"
-    for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"; do
-        [[ -f "$SHELL_RC" ]] || continue
-        # Backup before modifying
-        cp "$SHELL_RC" "$SHELL_RC.bak_$(date +%Y%m%d%H%M%S)"
-
-        # Add the configuration lines
-        {
-            echo -e "\n# Go configuration (added by setup_env.sh)"
-            echo "export GOPATH=\${HOME}/go"
-            echo "export PATH=/usr/local/go/bin:\${PATH}:\${GOPATH}/bin"
-        } >>"$SHELL_RC"
-    done
-
-    # Verify the installation
+    # No añadimos configuración directamente a .bashrc/.zshrc
+    # Solo verificamos la instalación
     export PATH=/usr/local/go/bin:$PATH
     if command -v go &>/dev/null; then
         format_message "OK" "Go 1.24.1 installed correctly:" "$OK"
@@ -260,6 +272,9 @@ install_go() {
     # Cleaning
     cd /
     rm -rf "$WORK_DIR"
+
+    # Marcar explícitamente que nosotros lo instalamos
+    GO_INSTALLED_BY_SCRIPT=true
 }
 
 # ----- Uninstall Singularity -----
@@ -413,6 +428,9 @@ install_singularity() {
     # Cleaning
     cd /
     rm -rf "$WORK_DIR"
+
+    # Marcar explícitamente que nosotros lo instalamos
+    SINGULARITY_INSTALLED_BY_SCRIPT=true
 }
 
 # ----- Install virtual Python environment with Snakemake -----
@@ -443,22 +461,13 @@ install_python_venv() {
         return 1
     fi
     echo
-    # Optional: Add an alias to .bashrc to easily activate
+    # No añadimos alias directamente a .bashrc/.zshrc
     if ask_question "Add alias 'snake_env' to activate the environment? (y/N): " "n"; then
         echo
-        for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"; do
-            [[ -f "$SHELL_RC" ]] || continue
-            # Backup before modifying
-            cp "$SHELL_RC" "$SHELL_RC.bak_$(date +%Y%m%d%H%M%S)"
-
-            # Add alias
-            echo -e "\n# Alias to activate virtual environment snake_env (added by setup_env.sh)" >>"$SHELL_RC"
-            echo "alias snake_env='source $ENV_DIR/bin/activate'" >>"$SHELL_RC"
-
-            format_message "INFO" "Alias added to $SHELL_RC" "$INFO"
-        done
-
-        format_message "INFO" "Now you can use the command 'snake_env' to activate the environment" "$INFO"
+        # Solo marcamos que queremos añadir el alias, sin modificar ficheros
+        SNAKE_ENV_ALIAS_REQUESTED=true
+        SNAKE_ENV_PATH="$ENV_DIR"
+        format_message "INFO" "Alias will be added to EPIBAC configuration block" "$INFO"
     else
         format_message "INFO" "Alias will not be added. To activate the environment use:" "$INFO"
         echo "       source $ENV_DIR/bin/activate"
@@ -485,18 +494,21 @@ install_conda() {
 
     # We download to the real user's home (not /root)
     cd "$REAL_USER_HOME"
-    sudo -u "$REAL_USER" wget -q https://repo.anaconda.com/miniconda/Miniconda3-py312_25.1.1-2-Linux-x86_64.sh -O miniconda.sh
+    # Usar run_as_real_user en lugar de sudo -u
+    run_as_real_user "wget -q https://repo.anaconda.com/miniconda/Miniconda3-py312_25.1.1-2-Linux-x86_64.sh -O $REAL_USER_HOME/miniconda.sh"
 
     # Verify SHA256 checksum
     EXPECTED_SHA256="4766d85b5f7d235ce250e998ebb5a8a8210cbd4f2b0fea4d2177b3ed9ea87884"
-    ACTUAL_SHA256=$(sha256sum miniconda.sh | cut -d' ' -f1)
+    ACTUAL_SHA256=$(sha256sum "$REAL_USER_HOME/miniconda.sh" | cut -d' ' -f1)
     if [[ "$EXPECTED_SHA256" != "$ACTUAL_SHA256" ]]; then
         format_message "ERROR" "Integrity verification failed for miniconda.sh" "$ERROR"
         exit 1
     fi
 
     # We give execution permissions
-    sudo -u "$REAL_USER" chmod u+x miniconda.sh
+    chmod +x "$REAL_USER_HOME/miniconda.sh"
+    # Asegurarse de que el propietario sea el usuario real
+    chown "$REAL_USER:$(id -gn $REAL_USER)" "$REAL_USER_HOME/miniconda.sh"
 
     # Check if directory already exists and remove it if necessary
     if [[ -d "$REAL_USER_HOME/miniconda3" ]]; then
@@ -506,38 +518,444 @@ install_conda() {
     fi
 
     # Unattended installation in ~/miniconda3
-    sudo -u "$REAL_USER" bash miniconda.sh -b -p "$REAL_USER_HOME/miniconda3"
+    run_as_real_user "bash $REAL_USER_HOME/miniconda.sh -b -p $REAL_USER_HOME/miniconda3"
 
     # Delete installer
-    sudo -u "$REAL_USER" rm -f miniconda.sh
+    run_as_real_user "rm -f $REAL_USER_HOME/miniconda.sh"
 
     format_message "INFO" "Miniconda installed in $REAL_USER_HOME/miniconda3." "$INFO"
 
-    # Initialize conda in user shells
-    run_as_user_with_conda "conda init bash"
-    if [[ -f "$REAL_USER_HOME/.zshrc" ]]; then
-        run_as_user_with_conda "conda init zsh"
+    # Initialize conda only for the shells being used
+    format_message "INFO" "Detecting current shell and initializing conda..." "$INFO"
+    
+    # Detectar el shell actual del usuario real
+    USER_SHELL=$(getent passwd "$REAL_USER" | cut -d: -f7)
+    format_message "INFO" "Detected shell for $REAL_USER: $USER_SHELL" "$INFO"
+    
+    # En lugar de usar conda init, añadimos manualmente la configuración necesaria
+    CONDA_INIT_BLOCK="# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup=\"\$('$REAL_USER_HOME/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)\"
+if [ \$? -eq 0 ]; then
+    eval \"\$__conda_setup\"
+else
+    if [ -f \"$REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh\" ]; then
+        . \"$REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh\"
+    else
+        export PATH=\"$REAL_USER_HOME/miniconda3/bin:\$PATH\"
     fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<"
+
+ZSH_CONDA_INIT_BLOCK="# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup=\"\$('$REAL_USER_HOME/miniconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)\"
+if [ \$? -eq 0 ]; then
+    eval \"\$__conda_setup\"
+else
+    if [ -f \"$REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh\" ]; then
+        . \"$REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh\"
+    else
+        export PATH=\"$REAL_USER_HOME/miniconda3/bin:\$PATH\"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<"
+
+# Inicializar conda para el shell actual del usuario
+if [[ "$USER_SHELL" == *"zsh"* ]]; then
+    format_message "INFO" "Adding conda initialization to zsh configuration..." "$INFO"
+    if [[ -f "$REAL_USER_HOME/.zshrc" ]]; then
+        # Primero eliminar cualquier inicialización existente de conda
+        if grep -q "conda initialize" "$REAL_USER_HOME/.zshrc"; then
+            # Guardar backup
+            cp "$REAL_USER_HOME/.zshrc" "$REAL_USER_HOME/.zshrc.bak_$(date +%Y%m%d%H%M%S)"
+            # Eliminar bloque existente
+            sed -i '/# >>> conda initialize >>>/,/# <<< conda initialize <<</d' "$REAL_USER_HOME/.zshrc"
+        fi
+        # Añadir el nuevo bloque al final
+        echo -e "\n$ZSH_CONDA_INIT_BLOCK" >> "$REAL_USER_HOME/.zshrc"
+        chown "$REAL_USER:$(id -gn $REAL_USER)" "$REAL_USER_HOME/.zshrc"
+        format_message "OK" "Conda initialization added to ~/.zshrc" "$OK"
+    fi
+else
+    format_message "INFO" "Adding conda initialization to bash configuration..." "$INFO"
+    if [[ -f "$REAL_USER_HOME/.bashrc" ]]; then
+        # Primero eliminar cualquier inicialización existente de conda
+        if grep -q "conda initialize" "$REAL_USER_HOME/.bashrc"; then
+            # Guardar backup
+            cp "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.bashrc.bak_$(date +%Y%m%d%H%M%S)"
+            # Eliminar bloque existente
+            sed -i '/# >>> conda initialize >>>/,/# <<< conda initialize <<</d' "$REAL_USER_HOME/.bashrc"
+        fi
+        # Añadir el nuevo bloque al final
+        echo -e "\n$CONDA_INIT_BLOCK" >> "$REAL_USER_HOME/.bashrc"
+        chown "$REAL_USER:$(id -gn $REAL_USER)" "$REAL_USER_HOME/.bashrc"
+        format_message "OK" "Conda initialization added to ~/.bashrc" "$OK"
+    fi
+fi
+
+# Opcionalmente preguntar por otros shells
+if [[ "$USER_SHELL" != *"zsh"* ]] && [[ -f "$REAL_USER_HOME/.zshrc" ]]; then
+    if ask_question "zsh configuration detected. Initialize conda for zsh as well? (y/N): " "n"; then
+        # Primero eliminar cualquier inicialización existente de conda
+        if grep -q "conda initialize" "$REAL_USER_HOME/.zshrc"; then
+            # Guardar backup
+            cp "$REAL_USER_HOME/.zshrc" "$REAL_USER_HOME/.zshrc.bak_$(date +%Y%m%d%H%M%S)"
+            # Eliminar bloque existente
+            sed -i '/# >>> conda initialize >>>/,/# <<< conda initialize <<</d' "$REAL_USER_HOME/.zshrc"
+        fi
+        # Añadir el nuevo bloque al final
+        echo -e "\n$ZSH_CONDA_INIT_BLOCK" >> "$REAL_USER_HOME/.zshrc"
+        chown "$REAL_USER:$(id -gn $REAL_USER)" "$REAL_USER_HOME/.zshrc"
+        format_message "OK" "Conda initialization added to ~/.zshrc" "$OK"
+    fi
+elif [[ "$USER_SHELL" != *"bash"* ]] && [[ -f "$REAL_USER_HOME/.bashrc" ]]; then
+    if ask_question "bash configuration detected. Initialize conda for bash as well? (y/N): " "n"; then
+        # Primero eliminar cualquier inicialización existente de conda
+        if grep -q "conda initialize" "$REAL_USER_HOME/.bashrc"; then
+            # Guardar backup
+            cp "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.bashrc.bak_$(date +%Y%m%d%H%M%S)"
+            # Eliminar bloque existente
+            sed -i '/# >>> conda initialize >>>/,/# <<< conda initialize <<</d' "$REAL_USER_HOME/.bashrc"
+        fi
+        # Añadir el nuevo bloque al final
+        echo -e "\n$CONDA_INIT_BLOCK" >> "$REAL_USER_HOME/.bashrc"
+        chown "$REAL_USER:$(id -gn $REAL_USER)" "$REAL_USER_HOME/.bashrc"
+        format_message "OK" "Conda initialization added to ~/.bashrc" "$OK"
+    fi
+fi
 
     # Configure proxy if specified
     if [[ -n "$PROXY_URL" ]]; then
         format_message "INFO" "Configuring proxy for conda: $PROXY_URL" "$INFO"
-        run_as_user_with_conda "conda config --set proxy_servers.http $PROXY_URL && conda config --set proxy_servers.https $PROXY_URL"
+        run_as_real_user "source $REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh && conda config --set proxy_servers.http $PROXY_URL && conda config --set proxy_servers.https $PROXY_URL"
         format_message "OK" "Proxy configured for conda." "$OK"
     fi
 
     echo
     format_message "INFO" "Conda has been initialized in the shell of user $REAL_USER." "$INFO"
-    format_message "INFO" "Reopening the terminal (or 'source ~/.bashrc') will activate conda (base)." "$INFO"
+    
+    # Cargar conda temporalmente en la sesión actual para que los comandos siguientes funcionen
+    export PATH="$REAL_USER_HOME/miniconda3/bin:$PATH"
+    source "$REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh" 2>/dev/null || true
+    
+    format_message "INFO" "Conda loaded temporarily for current session." "$INFO"
+    format_message "INFO" "For permanent access, restart your terminal or run: source ~/.bashrc" "$INFO"
+
+    # Definir las variables de instalación explícitamente antes de usarlas
+    CONDA_INSTALLED=true
+    if ! command -v singularity &>/dev/null; then
+        SINGULARITY_INSTALLED=false
+    fi
+    if ! command -v go &>/dev/null && [[ ! -d /usr/local/go ]]; then
+        GO_INSTALLED=false
+    fi
 
     # Installation verification
     if command -v conda &>/dev/null; then
         format_message "OK" "Conda installation verified:" "$OK"
-        run_as_user_with_conda "conda --version"
+        conda --version
     else
-        format_message "WARNING" "Could not verify conda installation" "$WARNING"
-        format_message "TIP" "Restart the terminal and run 'conda --version' manually" "$TIP"
+        format_message "WARNING" "Could not verify conda installation in this session." "$WARNING"
+        format_message "TIP" "Restart your terminal and run 'conda --version' manually" "$TIP"
     fi
+
+    # Actualizar la configuración EPIBAC con la nueva instalación de conda
+    format_message "INFO" "Updating shell configuration with EPIBAC block containing conda..." "$INFO"
+    update_epibac_shell_config "$CONDA_INSTALLED" "$SINGULARITY_INSTALLED" "$GO_INSTALLED"
+
+    # Marcar explícitamente que nosotros lo instalamos
+    CONDA_INSTALLED_BY_SCRIPT=true
+}
+
+###############################
+# FUNCIONES: CONFIGURACIÓN EPIBAC #
+###############################
+
+# Constantes para las etiquetas de configuración
+EPIBAC_TAG_START="# >>> EPIBAC_CONFIG >>>"
+EPIBAC_TAG_END="# <<< EPIBAC_CONFIG <<<"
+CONDA_TAG_START="# >>> conda initialize >>>"
+CONDA_TAG_END="# <<< conda initialize <<<"
+
+# Funciones para gestionar la configuración en .bashrc/.zshrc
+# Función para verificar si existe un bloque de configuración
+has_config_block() {
+    local file="$1"
+    local start_tag="$2"
+    
+    if [[ ! -f "$file" ]]; then
+        return 1
+    fi
+    
+    if grep -q "$start_tag" "$file"; then
+        return 0  # El bloque existe
+    else
+        return 1  # El bloque no existe
+    fi
+}
+
+# Función para extraer contenido de un bloque de configuración
+extract_config_block() {
+    local file="$1"
+    local start_tag="$2"
+    local end_tag="$3"
+    
+    if [[ ! -f "$file" ]] || ! has_config_block "$file" "$start_tag"; then
+        echo ""  # Devolver cadena vacía si no existe el bloque
+        return 1
+    fi
+    
+    # Extraer contenido entre las etiquetas (incluyendo las etiquetas)
+    sed -n "/$start_tag/,/$end_tag/p" "$file"
+    return 0
+}
+
+# Función para eliminar un bloque de configuración
+remove_config_block() {
+    local file="$1"
+    local start_tag="$2"
+    local end_tag="$3"
+    
+    if [[ ! -f "$file" ]] || ! has_config_block "$file" "$start_tag"; then
+        return 0  # No hay nada que eliminar
+    fi
+    
+    # Crear backup antes de modificar
+    cp "$file" "$file.bak_$(date +%Y%m%d%H%M%S)"
+    
+    # Eliminar el bloque completo (incluyendo las etiquetas)
+    sed -i "/$start_tag/,/$end_tag/d" "$file"
+    format_message "INFO" "Removed configuration block ($start_tag) from $file" "$INFO"
+    return 0
+}
+
+# Función para añadir un bloque de configuración
+add_config_block() {
+    local file="$1"
+    local start_tag="$2"
+    local end_tag="$3"
+    local content="$4"
+    
+    if [[ ! -f "$file" ]]; then
+        format_message "ERROR" "File $file does not exist" "$ERROR"
+        return 1
+    fi
+    
+    # Crear backup antes de modificar
+    cp "$file" "$file.bak_$(date +%Y%m%d%H%M%S)"
+    
+    # Si ya existe el bloque, eliminarlo primero
+    if has_config_block "$file" "$start_tag"; then
+        remove_config_block "$file" "$start_tag" "$end_tag"
+    fi
+    
+    # Añadir el nuevo bloque al final del archivo
+    {
+        echo -e "\n$start_tag"
+        echo -e "$content"
+        echo -e "$end_tag"
+    } >> "$file"
+    
+    format_message "INFO" "Added configuration block ($start_tag) to $file" "$INFO"
+    return 0
+}
+
+# Función para encontrar la instalación de conda
+find_conda_installation() {
+    # Primero verificar si está disponible en PATH
+    if command -v conda &>/dev/null; then
+        # Obtener el directorio base de conda
+        local conda_path=$(command -v conda)
+        echo "$(dirname "$(dirname "$conda_path")")"
+        return 0
+    fi
+    
+    # Verificar ubicaciones comunes
+    local common_locations=(
+        "$REAL_USER_HOME/miniconda3"
+        "$REAL_USER_HOME/anaconda3"
+        "$REAL_USER_HOME/conda"
+        "/opt/conda"
+        "/opt/miniconda3"
+        "/opt/anaconda3"
+        "/opt/apps/conda"
+        "/opt/apps/conda2"
+        "/opt/apps/miniconda3"
+        "/opt/apps/anaconda3"
+    )
+    
+    for loc in "${common_locations[@]}"; do
+        if [[ -f "$loc/bin/conda" ]]; then
+            echo "$loc"
+            return 0
+        fi
+    done
+    
+    # Buscar en los archivos .bashrc/.zshrc para buscar rutas de conda
+    for rc_file in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"; do
+        if [[ -f "$rc_file" ]]; then
+            # Buscar líneas tipo __conda_setup="$('/path/to/conda' 'shell.bash'...
+            local conda_path=$(grep -o "'\([^']*\)/conda' 'shell" "$rc_file" 2>/dev/null | sed "s|' 'shell||g" | sed "s|'||g")
+            if [[ -n "$conda_path" ]] && [[ -f "$conda_path" ]]; then
+                echo "$(dirname "$(dirname "$conda_path")")"
+                return 0
+            fi
+            
+            # Buscar líneas tipo export PATH="/path/to/conda/bin:$PATH"
+            local conda_bin_path=$(grep -o "PATH=\"\([^\"]*\)/conda[^/]*/bin" "$rc_file" 2>/dev/null | sed "s|PATH=\"||g" | sed "s|/bin||g")
+            if [[ -n "$conda_bin_path" ]] && [[ -d "$conda_bin_path/bin" ]]; then
+                echo "$conda_bin_path"
+                return 0
+            fi
+        fi
+    done
+    
+    # No se encontró conda
+    return 1
+}
+
+# Función para generar el bloque de configuración EPIBAC
+generate_epibac_config() {
+    local install_conda=$1
+    local install_singularity=$2
+    local install_go=$3
+    local conda_path=$4
+    
+    local config=""
+    
+    # Añadir sección de utilidad general (siempre se incluye)
+    config+="# EPIBAC environment configuration\n"
+    config+="# Helper function for clean PATH\n"
+    config+="clean_path_dups() {\n"
+    config+="    echo \"\$1\" | awk -v RS=':' '!a[\$0]++ {if (NR > 1) printf \":\"; printf \$0}'\n"
+    config+="}\n"
+    
+    # Sección de Go SOLO si LO INSTALAMOS NOSOTROS
+    if [[ "$GO_INSTALLED_BY_SCRIPT" == "true" ]]; then
+        config+="\n# Go configuration\n"
+        config+="export GOPATH=\"\$HOME/go\"\n"
+        config+="export PATH=\"/usr/local/go/bin:\$PATH:\$GOPATH/bin\"\n"
+    fi
+    
+    # Sección de Singularity SOLO si LO INSTALAMOS NOSOTROS
+    if [[ "$SINGULARITY_INSTALLED_BY_SCRIPT" == "true" ]]; then
+        config+="\n# Singularity configuration\n"
+        config+="alias sing_version='singularity --version'\n"
+        config+="alias sing_info='singularity --version && which singularity'\n"
+    fi
+    
+    # Añadir alias de snake_env si fue solicitado
+    if [[ "$SNAKE_ENV_ALIAS_REQUESTED" == "true" && -n "$SNAKE_ENV_PATH" ]]; then
+        config+="\n# Python virtual environment configuration\n"
+        config+="alias snake_env='source $SNAKE_ENV_PATH/bin/activate'\n"
+    fi
+    
+    # Sección de Conda SOLO si LO INSTALAMOS NOSOTROS
+    if [[ "$CONDA_INSTALLED_BY_SCRIPT" == "true" && -n "$conda_path" && -d "$conda_path" ]]; then
+        config+="\n# Conda configuration\n"
+        config+="conda_info() {\n"
+        config+="    conda info --envs\n"
+        config+="    echo -e \"\\nActive environment: \$(conda info | grep 'active env' | cut -d':' -f2 | xargs)\"\n"
+        config+="}\n\n"
+        config+="# Auto-deactivate conda on shell exit (better cleanup)\n"
+        config+="trap \"conda deactivate 2>/dev/null || true\" EXIT\n\n"
+        
+        # Asegurarse de que conda esté en el PATH sin importar cómo se inicializa
+        config+="# Ensure conda is always available in PATH\n"
+        config+="[[ \":\$PATH:\" != *\":$conda_path/bin:\"* ]] && export PATH=\"$conda_path/bin:\$PATH\"\n\n"
+        
+        # Añadir la inicialización de conda - solo si existe el archivo
+        if [[ -f "$conda_path/etc/profile.d/conda.sh" ]]; then
+            config+="# Inicialización para cargar conda en la shell\n"
+            config+="if [ -f \"$conda_path/etc/profile.d/conda.sh\" ]; then\n"
+            config+="    . \"$conda_path/etc/profile.d/conda.sh\"\n"
+            config+="fi\n"
+        fi
+    fi
+    
+    echo -e "$config"
+}
+
+# Función para actualizar o crear el bloque EPIBAC en los archivos de shell
+update_epibac_shell_config() {
+    local install_conda=$1
+    local install_singularity=$2
+    local install_go=$3
+    
+    # Asegurarse de que las variables estén definidas
+    install_conda=${install_conda:-false}
+    install_singularity=${install_singularity:-false}
+    install_go=${install_go:-false}
+    
+    # Debug: Mostrar qué componentes se incluirán en el bloque
+    format_message "INFO" "Updating EPIBAC configuration with:" "$INFO"
+    [[ "$install_conda" == "true" ]] && format_message "INFO" "- Conda configuration" "$INFO"
+    [[ "$install_singularity" == "true" ]] && format_message "INFO" "- Singularity configuration" "$INFO"
+    [[ "$install_go" == "true" ]] && format_message "INFO" "- Go configuration" "$INFO"
+    
+    # Si no se instala nada nuevo, no tocar la configuración
+    if [[ "$install_conda" != "true" && "$install_singularity" != "true" && "$install_go" != "true" ]]; then
+        format_message "INFO" "No installations detected, shell configuration will remain unchanged" "$INFO"
+        return 0
+    fi
+    
+    # Encontrar la ruta de conda si está instalado
+    local conda_path=""
+    if [[ "$install_conda" == "true" ]]; then
+        if ! conda_path=$(find_conda_installation); then
+            format_message "WARNING" "Conda installation not found, using default path" "$WARNING"
+            conda_path="$REAL_USER_HOME/miniconda3"
+        fi
+        format_message "INFO" "Using conda installation at: $conda_path" "$INFO"
+    fi
+    
+    # Generar la configuración EPIBAC
+    local epibac_config=$(generate_epibac_config "$install_conda" "$install_singularity" "$install_go" "$conda_path")
+    
+    # Actualizar los archivos de shell
+    for shell_rc in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"; do
+        [[ -f "$shell_rc" ]] || continue
+        
+        format_message "INFO" "Updating EPIBAC configuration in: $(basename "$shell_rc")" "$INFO"
+        
+        # IMPORTANTE: NO eliminar el bloque conda initialize, es generado por conda init
+        # Si hay un bloque EPIBAC, lo actualizamos pero preservamos el bloque conda
+        if has_config_block "$shell_rc" "$EPIBAC_TAG_START"; then
+            remove_config_block "$shell_rc" "$EPIBAC_TAG_START" "$EPIBAC_TAG_END"
+        fi
+        
+        # Añadir/actualizar el bloque EPIBAC
+        add_config_block "$shell_rc" "$EPIBAC_TAG_START" "$EPIBAC_TAG_END" "$epibac_config"
+        
+        # Si conda no está en el PATH del usuario en su .bashrc o .zshrc, asegurarse de que se agregue fuera del bloque EPIBAC
+        if [[ "$install_conda" == "true" ]] && ! grep -q "miniconda3/bin" "$shell_rc"; then
+            echo -e "\n# Ensure conda is in PATH (added by setup_conda_singularity.sh)" >> "$shell_rc"
+            echo "export PATH=\"$REAL_USER_HOME/miniconda3/bin:\$PATH\"" >> "$shell_rc"
+            format_message "INFO" "Added conda to PATH in $(basename "$shell_rc")" "$INFO"
+        fi
+    done
+    
+    format_message "OK" "EPIBAC configuration updated in shell files" "$OK"
+    format_message "INFO" "Changes will take effect after restarting the terminal or running 'source ~/.bashrc'" "$INFO"
+    return 0
+}
+
+# Función para limpiar la configuración EPIBAC
+clean_epibac_shell_config() {
+    for shell_rc in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"; do
+        [[ -f "$shell_rc" ]] || continue
+        
+        if has_config_block "$shell_rc" "$EPIBAC_TAG_START"; then
+            format_message "INFO" "Removing EPIBAC configuration from $(basename "$shell_rc")" "$INFO"
+            remove_config_block "$shell_rc" "$EPIBAC_TAG_START" "$EPIBAC_TAG_END"
+        fi
+    done
+    
+    format_message "INFO" "EPIBAC configuration removed from shell files" "$INFO"
+    return 0
 }
 
 ###############################
@@ -677,15 +1095,20 @@ case "$MODE" in
             format_message "INFO" "Conda detected in: $CONDA_PATH" "$INFO"
             sudo -u "$REAL_USER" "$CONDA_PATH" --version || true
             echo
-            format_message "WARNING" "This may correspond to Anaconda, Miniconda, or another variant." "$WARNING"
-            echo
-            # Ask if uninstall using the ask_question function
-            if ask_question "Uninstall conda? (y/N): " "n"; then
-                remove_conda
-                CONDA_AVAILABLE=false
+            
+            # Simplificar la decisión a una pregunta directa
+            if ask_question "Completely uninstall conda and reinstall? (Not necessary for configuring channels or environments) (y/N): " "n"; then
+                format_message "WARNING" "Preparing to uninstall conda completely..." "$WARNING"
+                if remove_conda; then
+                    CONDA_AVAILABLE=false
+                else
+                    format_message "ERROR" "Conda uninstallation canceled." "$ERROR"
+                    exit 1
+                fi
             else
-                format_message "INFO" "Current conda installation kept." "$INFO"
+                format_message "INFO" "Keeping existing conda installation." "$INFO"
                 CONDA_AVAILABLE=true
+                CONDA_INSTALLED_BY_SCRIPT=true  # Tratar la instalación existente como nuestra
             fi
         elif $CONDA_DIRS_EXIST; then
             # 3. If directories were found but conda doesn't work, it's likely a broken installation
@@ -703,25 +1126,27 @@ case "$MODE" in
         else
             format_message "INFO" "Conda not detected in the system." "$INFO"
         fi
-        echo
-        # 4. If conda is not available, offer to install
+        
+        # 3. Offer to install conda only if it's not available
         if ! $CONDA_AVAILABLE; then
-            if ask_question "Install Miniconda3: Conda 25.1.1 - Python 3.12.9 (y/N) " "n"; then
+            echo
+            if ask_question "Install Miniconda3: Conda 25.1.1 - Python 3.12.9? (y/N): " "n"; then
                 install_conda
                 CONDA_AVAILABLE=true
+                CONDA_INSTALLED_BY_SCRIPT=true
             else
                 format_message "INFO" "Miniconda will not be installed." "$INFO"
             fi
         fi
 
-        # 5. Channel configuration and mamba (only if conda is available)
+        # 4. Channel configuration and mamba now as a separate option
         if $CONDA_AVAILABLE; then
             echo
             if ask_question "Configure channels (conda-forge, bioconda) and install mamba? (y/N): " "n"; then
                 format_message "INFO" "Configuring conda..." "$INFO"
 
-                sudo -u "$REAL_USER" /bin/bash -c "source $REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh && \
-                    conda config --remove-key channels || true && \
+                # Usar run_as_real_user en lugar de sudo -u
+                run_as_real_user "source $REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh && conda config --remove-key channels || true && \
                     conda config --add channels defaults && \
                     conda config --add channels bioconda && \
                     conda config --add channels conda-forge && \
@@ -738,8 +1163,8 @@ case "$MODE" in
                 format_message "INFO" "Channels and mamba will not be configured." "$INFO"
                 MAMBA_AVAILABLE=false
             fi
-
-            # 6. Creation of the snake environment
+            
+            # 5. Creation of the snake environment as a separate option
             echo
             if ask_question "Create the 'snake' environment with Snakemake? (y/N): " "n"; then
                 format_message "INFO" "Creating 'snake' environment with Snakemake..." "$INFO"
@@ -748,19 +1173,16 @@ case "$MODE" in
                 # In the section where you define INSTALL_CMD, add "conda" to the packages
                 if $MAMBA_AVAILABLE; then
                     INSTALL_CMD="mamba create -n snake -y -c conda-forge bioconda::snakemake=9.1.1 \
-                                            bioconda::snakemake-wrapper-utils=0.7.2 \
-                                            pandas openpyxl git"
+                                                bioconda::snakemake-wrapper-utils=0.7.2 \
+                                                pandas openpyxl git"
                 else
                     INSTALL_CMD="conda create -n snake -y -c conda-forge bioconda::snakemake=9.1.1 \
-                                            bioconda::snakemake-wrapper-utils=0.7.2 \
-                                            pandas openpyxl git"
+                                                bioconda::snakemake-wrapper-utils=0.7.2 \
+                                                pandas openpyxl git"
                 fi
 
                 # Execute the installation
-                sudo -u "$REAL_USER" /bin/bash -c "source $REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh && \
-                    $INSTALL_CMD && \
-                    conda activate snake && \
-                    snakemake --version"
+                run_as_real_user "source $REAL_USER_HOME/miniconda3/etc/profile.d/conda.sh && $INSTALL_CMD && conda activate snake && snakemake --version"
 
                 format_message "OK" "'snake' environment created successfully." "$OK"
 
@@ -793,29 +1215,27 @@ case "$MODE" in
         ;;
 esac
 
-# Modify the section where PATH is updated to avoid duplicates
-if [[ ":$PATH:" != *":/usr/local/go/bin:"* ]]; then
-    export PATH="/usr/local/go/bin:$PATH"
+# Inicializar las variables de instalación según el estado actual
+if command -v conda &>/dev/null; then
+    CONDA_INSTALLED=true
+else
+    CONDA_INSTALLED=false
 fi
 
-# Update .bashrc and .zshrc to avoid duplicate entries
-for SHELL_RC in "$REAL_USER_HOME/.bashrc" "$REAL_USER_HOME/.zshrc"; do
-    [[ -f "$SHELL_RC" ]] || continue
-    if ! grep -q "/usr/local/go/bin" "$SHELL_RC"; then
-        echo "export PATH=/usr/local/go/bin:\$PATH" >> "$SHELL_RC"
-        format_message "INFO" "Added /usr/local/go/bin to PATH in $SHELL_RC" "$INFO"
-    fi
-    if ! grep -q "$HOME/miniconda3/bin" "$SHELL_RC"; then
-        echo "export PATH=\"$HOME/miniconda3/bin:\$PATH\"" >> "$SHELL_RC"
-        format_message "INFO" "Added $HOME/miniconda3/bin to PATH in $SHELL_RC" "$INFO"
-    fi
-    # Clean duplicates in the shell configuration file
-    sed -i '/^export PATH=/!b; s/:/\n/g' "$SHELL_RC" | awk '!a[$0]++' | tr '\n' ':' | sed 's/:$//' > "$SHELL_RC.tmp"
-    mv "$SHELL_RC.tmp" "$SHELL_RC"
-    format_message "INFO" "Cleaned duplicate PATH entries in $SHELL_RC" "$INFO"
-    source "$SHELL_RC"
-    format_message "INFO" "Reloaded $SHELL_RC to apply changes." "$INFO"
-done
+if command -v singularity &>/dev/null; then
+    SINGULARITY_INSTALLED=true
+else
+    SINGULARITY_INSTALLED=false
+fi
+
+if command -v go &>/dev/null || [[ -d /usr/local/go ]]; then
+    GO_INSTALLED=true
+else
+    GO_INSTALLED=false
+fi
+
+format_message "INFO" "Checking if shell configuration needs to be updated..." "$INFO"
+update_epibac_shell_config "$CONDA_INSTALLED" "$SINGULARITY_INSTALLED" "$GO_INSTALLED"
 
 echo
 echo -e "${BOLD}\033[32m====================================================================${COLOR_RESET}"

@@ -1,15 +1,8 @@
-# Ignorar todo por defecto
-*
-.*
+# Ignorar todo por defecto, pero permitir directorios
+**/*
+!*/
 
-# No ignorar directorios principales (necesario para que funcionen las reglas de subdirectorios)
-!data/
-!workflow/
-!output/
-!resources/
-!logs/
-
-# No ignorar archivos específicos en la raíz
+# Permitir archivos clave en la raíz
 !epibac.py
 !config.yaml
 !LICENSE
@@ -18,28 +11,39 @@
 !CHANGELOG.md
 !CONTRIBUTING.md
 
-# Ignorar contenidos de directorios específicos
+# No ignorar workflow y su contenido
+!workflow/
+!workflow/**
+
+# No ignorar output, logs, resources (solo sus carpetas)
+!output/
+!logs/
+!resources/
+
+# Ignorar contenido por defecto en estas carpetas
 output/*
 logs/*
 resources/*
 
-# Permitir archivos .gitkeep
+# Permitir archivos específicos en esas carpetas
 !output/.gitkeep
 !logs/.gitkeep
 !resources/setup_conda_singularity.sh
 
-# Permitir datos de ejemplo
-!data/250319_ALIC001/
-!data/250319_ALIC001/**/*.fastq.gz
+# Ignorar por defecto todo en data
+data/*
 
-# No ignorar nada en workflow
-!workflow/
-!workflow/**
+# Permitir carpeta de ejemplo con fastq
+#!data/250319_ALIC001/
+#!data/250319_ALIC001/**/
+#!data/250319_ALIC001/**/*.fastq.gz
+data/**/*.fastq.gz
 
-# Ignorar todos los directorios __pycache__ en cualquier nivel
+# Ignorar pycache y binarios de Python
 **/__pycache__/
-
-# Ignorar todos los archivos compilados de Python en cualquier nivel
 **/*.pyc
 **/*.pyo
 **/*.pyd
+
+# Ignorar toda la carpeta de Snakemake (entornos, locks, logs, etc.)
+.snakemake/

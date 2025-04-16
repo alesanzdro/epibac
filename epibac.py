@@ -376,7 +376,7 @@ class EpibacRunner:
                 os.environ["PATH"] = f"{conda_dir}:{os.environ.get('PATH', '')}"
                 self.logger.info(f"Using conda from: {self.conda_path}")
                 # Ensure setuptools is installed in the Conda environment
-                cmd.extend(["--conda-create-env-args", "--override-channels", "-c", "defaults", "-c", "conda-forge", "setuptools"])
+                cmd.extend(["--conda-create-env-args", "--override-channels", "-c", "defaults", "-c", "conda-forge", "setuptools perl perl-list-moreutils perl-list-moreutils-xs"])
                 self.logger.info("Ensuring setuptools is installed in the Conda environment")
                 
         elif self.args.singularity:
