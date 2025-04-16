@@ -18,12 +18,13 @@
 # No ignorar output, logs, resources (solo sus carpetas)
 !output/
 !logs/
-!resources/
+!resources/databases/mlst/ 
+!resources/databases/mlst/**/*
 
 # Ignorar contenido por defecto en estas carpetas
 output/*
 logs/*
-resources/*
+#resources/*
 
 # Permitir archivos específicos en esas carpetas
 !output/.gitkeep
