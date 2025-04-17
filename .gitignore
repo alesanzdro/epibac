@@ -20,6 +20,8 @@
 !logs/
 !resources/databases/mlst/ 
 !resources/databases/mlst/**/*
+# Ignored because it contains its own Git repository, which causes conflicts if added directly
+resources/databases/resfinder/
 
 # Ignorar contenido por defecto en estas carpetas
 output/*
